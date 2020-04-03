@@ -14,8 +14,8 @@ layer_sizes = np.array([2, 100, 1])
 
 fhat = model.fhat(np.array([2, 50, 50, 2]))
 V = model.MakePSD(model.ICNN(layer_sizes),2)
-f = model.dynamics(fhat,V)
-
+# f = model.dynamics_simple(fhat,V)
+f = model.dynamics_nonincrease(fhat,V)
 
 def get_trajectory(f, x0, steps):
 
@@ -30,7 +30,7 @@ def get_trajectory(f, x0, steps):
 
     return X.detach().numpy()
 
-X = get_trajectory(f, 4*torch.randn([1,2], dtype = torch.float), 30)
+X = get_trajectory(f, 3*torch.randn([1,2], dtype = torch.float), 50)
 
 
 # List of points in x axis
@@ -40,7 +40,7 @@ XPoints     = []
 YPoints     = []
 
 # X and Y points are from -6 to +6 varying in steps of 2
-for val in np.linspace(-6, 6, 75):
+for val in np.linspace(-5, 5, 60):
     XPoints.append(val)
     YPoints.append(val)
 
@@ -57,8 +57,8 @@ for i in range(0, len(XPoints)):
         ZPoints[i][j] = (V(z))
 
 # Set the x axis and y axis limits
-pylab.xlim([-6,6])
-pylab.ylim([-6,6])
+pylab.xlim([-5,5])
+pylab.ylim([-5,5])
 
 # Provide a title for the contour plot
 plt.title('Contour plot')

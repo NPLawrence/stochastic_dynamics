@@ -103,7 +103,8 @@ class ICNN(nn.Module):
         return F.linear(x, self.W[-1], self.bias[-1]) + F.linear(z, F.softplus(self.U[-1])) / self.U[-1].shape[0]
 
 
-class dynamics(nn.Module):
+
+class dynamics_simple(nn.Module):
     def __init__(self, fhat, V):
         super().__init__()
 
@@ -122,3 +123,32 @@ class dynamics(nn.Module):
         # fx = self.fhat(x)
 
         return fx
+
+class dynamics_nonincrease(nn.Module):
+    def __init__(self, fhat, V):
+        super().__init__()
+
+        # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
+        #                     nn.Linear(50, 50), nn.ReLU(),
+        #                     nn.Linear(50, 50), nn.ReLU(),
+        #                     nn.Linear(50, 2))
+
+        self.fhat = fhat
+        self.V = V
+
+    def forward(self, x):
+
+        x.requires_grad_(True)
+        fx = self.fhat(x)
+        Vx = self.V(x)
+        # G = Vx.backward()
+        # gV = x.grad
+        # print(fx.dtype)
+        # print(F.relu((gV*(fx - x)).sum(dim = 1)))
+        gV = torch.autograd.grad([a for a in Vx], [x], create_graph=True, only_inputs=True)[0]
+
+        f = fx - F.relu((gV*(fx - x)).sum(dim = 1))*gV/(gV**2).sum(dim=1)[:,None]
+        # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
+
+
+        return f
