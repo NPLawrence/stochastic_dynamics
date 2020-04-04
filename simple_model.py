@@ -40,7 +40,8 @@ class fhat(nn.Module):
 
         for W,b in zip(self.W, self.bias):
             z = F.linear(x, W, b)
-            z = F.tanh(z)
+            z = torch.tanh(z)
+            # z = F.relu(z)
 
         return z
 
@@ -56,7 +57,7 @@ class ReHU(nn.Module):
         return torch.max(torch.clamp(torch.sign(x)*self.a/2*x**2,min=0,max=-self.b),x+self.b)
 
 class MakePSD(nn.Module):
-    def __init__(self, f, n, eps=0.01, d=1.0):
+    def __init__(self, f, n, eps=0.1, d=1.0):
         super().__init__()
         self.f = f
         self.zero = torch.nn.Parameter(f(torch.zeros(1,n)), requires_grad=False)
@@ -118,9 +119,10 @@ class dynamics_simple(nn.Module):
 
     def forward(self, x):
 
-        beta = 1
-        fx = self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
-        # fx = self.fhat(x)
+        with torch.no_grad():
+            beta = 1
+            fx = self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+            # fx = self.fhat(x)
 
         return fx
 
@@ -128,10 +130,7 @@ class dynamics_nonincrease(nn.Module):
     def __init__(self, fhat, V):
         super().__init__()
 
-        # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
-        #                     nn.Linear(50, 50), nn.ReLU(),
-        #                     nn.Linear(50, 50), nn.ReLU(),
-        #                     nn.Linear(50, 2))
+
 
         self.fhat = fhat
         self.V = V
@@ -139,7 +138,7 @@ class dynamics_nonincrease(nn.Module):
     def forward(self, x):
 
         x.requires_grad_(True)
-        fx = self.fhat(x)
+        fhatx = self.fhat(x)
         Vx = self.V(x)
         # G = Vx.backward()
         # gV = x.grad
@@ -147,8 +146,46 @@ class dynamics_nonincrease(nn.Module):
         # print(F.relu((gV*(fx - x)).sum(dim = 1)))
         gV = torch.autograd.grad([a for a in Vx], [x], create_graph=True, only_inputs=True)[0]
 
-        f = fx - F.relu((gV*(fx - x)).sum(dim = 1))*gV/(gV**2).sum(dim=1)[:,None]
+        fx = fhatx - F.relu((gV*(fhatx - x)).sum(dim = 1))*gV/(gV**2).sum(dim=1)[:,None]
         # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
 
 
-        return f
+        return fx
+
+class dynamics_rootfind(nn.Module):
+    def __init__(self, fhat, V):
+        super().__init__()
+
+        self.tol = 0.1
+
+
+        self.fhat = fhat
+        self.V = V
+
+    def forward(self, x):
+
+        x.requires_grad_(True)
+        fhatx = self.fhat(x)
+        Vx = self.V(x)
+        # G = Vx.backward()
+        # gV = x.grad
+        # print(fx.dtype)
+        # print(F.relu((gV*(fx - x)).sum(dim = 1)))
+        # gV = torch.autograd.grad([a for a in Vx], [x], create_graph=True, only_inputs=True)[0]
+
+        # fx = fhatx - F.relu((gV*(fhatx - x)).sum(dim = 1))*gV/(gV**2).sum(dim=1)[:,None]
+        # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
+
+        beta = 1
+
+        alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
+        g = self.V(fhatx*alpha) - beta*self.V(x)
+
+        while self.V(fhatx*alpha) - beta*Vx > 0:
+
+            gV = torch.autograd.grad([a for a in self.V(fhatx*alpha)], [alpha], create_graph=True, only_inputs=True)[0]
+            alpha = alpha - (self.V(fhatx*alpha) - beta*Vx)/gV
+
+
+
+        return fhatx*alpha

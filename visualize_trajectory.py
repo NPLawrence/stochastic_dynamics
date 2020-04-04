@@ -15,7 +15,8 @@ layer_sizes = np.array([2, 100, 1])
 fhat = model.fhat(np.array([2, 50, 50, 2]))
 V = model.MakePSD(model.ICNN(layer_sizes),2)
 # f = model.dynamics_simple(fhat,V)
-f = model.dynamics_nonincrease(fhat,V)
+# f = model.dynamics_nonincrease(fhat,V)
+f = model.dynamics_rootfind(fhat,V)
 
 def get_trajectory(f, x0, steps):
 
@@ -75,7 +76,7 @@ contours = plt.contour(XPoints, YPoints, ZPoints)
 # Display z values on contour lines
 plt.clabel(contours, inline=1, fontsize=10)
 
-plt.plot(X[:,0],X[:,1])
+plt.plot(X[:,0],X[:,1], 'r')
 
 # Display the contour plot
 plt.show()
