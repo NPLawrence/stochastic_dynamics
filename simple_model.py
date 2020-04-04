@@ -181,11 +181,14 @@ class dynamics_rootfind(nn.Module):
         alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
         g = self.V(fhatx*alpha) - beta*self.V(x)
 
-        while self.V(fhatx*alpha) - beta*Vx > 0:
+        while (self.V(fhatx*alpha) - beta*Vx) > 0.01:
 
-            gV = torch.autograd.grad([a for a in self.V(fhatx*alpha)], [alpha], create_graph=True, only_inputs=True)[0]
-            alpha = alpha - (self.V(fhatx*alpha) - beta*Vx)/gV
+            y = fhatx*alpha
+            gV = torch.autograd.grad([a for a in self.V(y)], [y], create_graph=True, only_inputs=True)[0]
+            alpha = alpha - (self.V(fhatx*alpha) - beta*Vx)/(gV*fhatx).sum(dim = 1)
 
-
+            # h = torch.autograd.grad([a for a in self.V(fhatx*alpha)], [alpha], create_graph=True, only_inputs=True)[0]
+            # print((gV*fhatx).sum(dim = 1))
+            # print(h)
 
         return fhatx*alpha
