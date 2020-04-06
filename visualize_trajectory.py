@@ -16,7 +16,9 @@ fhat = model.fhat(np.array([2, 50, 50, 2]))
 V = model.MakePSD(model.ICNN(layer_sizes),2)
 # f = model.dynamics_simple(fhat,V)
 # f = model.dynamics_nonincrease(fhat,V)
-f = model.dynamics_rootfind(fhat,V)
+# f = model.dynamics_rootfind(fhat,V)
+f = model.dynamics_stochastic(fhat,V)
+
 
 def get_trajectory(f, x0, steps):
 
@@ -31,7 +33,7 @@ def get_trajectory(f, x0, steps):
 
     return X.detach().numpy()
 
-X = get_trajectory(f, 3*torch.randn([1,2], dtype = torch.float), 50)
+X = get_trajectory(f, 3.5*torch.randn([1,2], dtype = torch.float), 200)
 
 
 # List of points in x axis
@@ -77,6 +79,7 @@ contours = plt.contour(XPoints, YPoints, ZPoints)
 plt.clabel(contours, inline=1, fontsize=10)
 
 plt.plot(X[:,0],X[:,1], 'r')
+plt.plot(X[-1,0], X[-1,1], "b*")
 
 # Display the contour plot
 plt.show()
