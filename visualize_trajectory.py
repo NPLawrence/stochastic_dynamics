@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from mpl_toolkits.mplot3d import Axes3D
 import pylab
+import random
 
 import torch
 import torch.nn as nn
@@ -10,76 +12,78 @@ import torch.optim as optim
 
 import simple_model as model
 
-layer_sizes = np.array([2, 100, 1])
+class plot_dynamics(nn.Module):
+    #Generates stochastically stable system via root-find
+    def __init__(self, f, V, x0):
+        super().__init__()
 
-fhat = model.fhat(np.array([2, 50, 50, 2]))
-V = model.MakePSD(model.ICNN(layer_sizes),2)
-# f = model.dynamics_simple(fhat,V)
-# f = model.dynamics_nonincrease(fhat,V)
-# f = model.dynamics_rootfind(fhat,V)
-f = model.dynamics_stochastic(fhat,V)
-
-
-def get_trajectory(f, x0, steps):
-
-    X = torch.empty([steps,x0.size(1)])
-    x = x0
-    X[0,:] = x
-
-    for i in range(steps-1):
-
-        x = f(x)
-        X[i+1,:] = x
-
-    return X.detach().numpy()
-
-X = get_trajectory(f, 3.5*torch.randn([1,2], dtype = torch.float), 200)
+        self.f = f
+        self.V = V
+        self.x0 = x0
 
 
-# List of points in x axis
-XPoints     = []
+    def get_trajectory(self, f, steps = 50):
 
-# List of points in y axis
-YPoints     = []
+        X = torch.empty([steps,self.x0.size(1)])
+        x = self.x0
+        X[0,:] = x
 
-# X and Y points are from -6 to +6 varying in steps of 2
-for val in np.linspace(-5, 5, 60):
-    XPoints.append(val)
-    YPoints.append(val)
+        for i in range(steps-1):
 
-# Z values as a matrix
-ZPoints     = np.ndarray((len(XPoints),len(YPoints)))
+            x = self.f(x)
+            X[i+1,:] = x
 
-# Populate Z Values (a 7x7 matrix) - For a circle x^2+y^2=z
-for i in range(0, len(XPoints)):
-    for j in range(0, len(YPoints)):
-        # z = np.array([x,y])
-        x = XPoints[i]
-        y = YPoints[j]
-        z = torch.tensor([[x,y]], dtype = torch.float)
-        ZPoints[i][j] = (V(z))
+        return X.detach().numpy()
 
-# Set the x axis and y axis limits
-pylab.xlim([-5,5])
-pylab.ylim([-5,5])
 
-# Provide a title for the contour plot
-plt.title('Contour plot')
+    def plot_trajectory(self):
 
-# Set x axis label for the contour plot
-plt.xlabel('X')
+        X = self.get_trajectory(self.f)
 
-# Set y axis label for the contour plot
-plt.ylabel('Y')
+        # List of points in x axis
+        XPoints     = []
 
-# Create contour lines or level curves using matpltlib.pyplot module
-contours = plt.contour(XPoints, YPoints, ZPoints)
+        # List of points in y axis
+        YPoints     = []
 
-# Display z values on contour lines
-plt.clabel(contours, inline=1, fontsize=10)
+        # X and Y points are from -6 to +6 varying in steps of 2
+        for val in np.linspace(-4, 4, 100):
+            XPoints.append(val)
+            YPoints.append(val)
 
-plt.plot(X[:,0],X[:,1], 'r')
-plt.plot(X[-1,0], X[-1,1], "b*")
+        # Z values as a matrix
+        ZPoints     = np.ndarray((len(XPoints),len(YPoints)))
 
-# Display the contour plot
-plt.show()
+        # Populate Z Values (a 7x7 matrix) - For a circle x^2+y^2=z
+        for i in range(0, len(XPoints)):
+            for j in range(0, len(YPoints)):
+                # z = np.array([x,y])
+                x = XPoints[i]
+                y = YPoints[j]
+                z = torch.tensor([[x,y]], dtype = torch.float)
+                ZPoints[i][j] = (self.V(z))
+
+        # Set the x axis and y axis limits
+        pylab.xlim([-4,4])
+        pylab.ylim([-4,4])
+
+        # Provide a title for the contour plot
+        plt.title('Contour plot')
+
+        # Set x axis label for the contour plot
+        plt.xlabel('X')
+
+        # Set y axis label for the contour plot
+        plt.ylabel('Y')
+
+        # Create contour lines or level curves using matpltlib.pyplot module
+        contours = plt.contour(XPoints, YPoints, ZPoints)
+
+        # Display z values on contour lines
+        plt.clabel(contours, inline=1, fontsize=10)
+
+        plt.plot(X[:,0],X[:,1], 'r')
+        plt.plot(X[-1,0], X[-1,1], "b*")
+
+        # Display the contour plot
+        # plt.show()

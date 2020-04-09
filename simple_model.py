@@ -152,26 +152,27 @@ class dynamics_stochastic(nn.Module):
 
         fhatx = self.fhat(x)
         Vx = self.V(x)
-        beta = 0.99
+        beta = 0.999
 
         alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
-        target = F.relu(torch.distributions.Normal(beta*Vx, 0.1).sample())
-        # while target < 0:
-        #     target = torch.distributions.Normal(beta*Vx, 1.0).sample()
+        target = torch.distributions.Normal(beta*Vx, 0.1).sample()
+        while target < 0:
+            target = torch.distributions.Normal(beta*Vx, 0.1).sample()
 
-        g = self.V(fhatx*alpha) - target
+        f_rand = torch.distributions.Normal(fhatx, 0.1).sample()
+        g = self.V(f_rand*alpha) - target
 
-        while (self.V(fhatx*alpha) - target) > self.tol:
+        while (self.V(f_rand*alpha) - target) > self.tol:
 
-            y = fhatx*alpha
+            y = f_rand*alpha
             gV = torch.autograd.grad([a for a in self.V(y)], [y], create_graph=True, only_inputs=True)[0]
-            alpha = alpha - (self.V(fhatx*alpha) - target)/(gV*fhatx).sum(dim = 1)
+            alpha = alpha - (self.V(f_rand*alpha) - target)/(gV*f_rand).sum(dim = 1)
 
             # h = torch.autograd.grad([a for a in self.V(fhatx*alpha)], [alpha], create_graph=True, only_inputs=True)[0]
             # print((gV*fhatx).sum(dim = 1))
             # print(h)
 
-        return fhatx*alpha
+        return f_rand*alpha
 
 
 
@@ -187,7 +188,7 @@ class ReHU(nn.Module):
         return torch.max(torch.clamp(torch.sign(x)*self.a/2*x**2,min=0,max=-self.b),x+self.b)
 
 class MakePSD(nn.Module):
-    def __init__(self, f, n, eps=0.1, d=1.0):
+    def __init__(self, f, n, eps=0.01, d=1.0):
         super().__init__()
         self.f = f
         self.zero = torch.nn.Parameter(f(torch.zeros(1,n)), requires_grad=False)
