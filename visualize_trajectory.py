@@ -24,9 +24,10 @@ class plot_dynamics(nn.Module):
 
     def get_trajectory(self, f, steps = 50):
 
-        X = torch.empty([steps,self.x0.size(1)])
         x = self.x0
-        X[0,:] = x
+        X = torch.empty([steps,x.squeeze().size(0)])
+
+        X[0,:] = x.squeeze()
 
         for i in range(steps-1):
 
