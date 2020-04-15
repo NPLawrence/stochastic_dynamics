@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.autograd import Variable
 
 
 #Some code samples taken from implementation by Manek + Kolter
@@ -17,8 +16,6 @@ from torch.autograd import Variable
 #   1. Create class for NN model for dynamics fhat
 #   2. Create class NN model for Lyapunov function
 #   3. Combine these models in a new class to create stable model
-
-
 
 
 class fhat(nn.Module):
@@ -109,6 +106,7 @@ class dynamics_rootfind(nn.Module):
 
         self.fhat = fhat
         self.V = V
+
 
     def forward(self, x):
 

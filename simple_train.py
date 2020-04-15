@@ -10,7 +10,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.autograd import Variable
 import torchvision
 from torch.utils.data import DataLoader
 
@@ -37,12 +36,8 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
 V = model.MakePSD(model.ICNN(layer_sizes),2)
 # f = model.dynamics_simple(fhat,V)
 f_net = model.dynamics_nonincrease(fhat,V)
-# f = model.dynamics_rootfind(fhat,V)
 # f_net = fhat
 
-
-
-criterion = nn.MSELoss()
 
 
 
@@ -70,8 +65,10 @@ writer = SummaryWriter('runs/linear_experiment_1')
 # writer.add_graph(f_net, input[0])
 
 
+criterion = nn.MSELoss()
+
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
-# f_net.train()
+f_net.train()
 
 for epoch in range(epochs):
 
