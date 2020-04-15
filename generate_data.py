@@ -13,7 +13,7 @@ num_rollout = 100
 class data_linear():
     def __init__(self):
 
-        A = np.array([[1/2, 1],[0, -1/2]])
+        A = np.array([[1/2, 1],[0, 1/2]])
         A = A.transpose()
         data = []
 

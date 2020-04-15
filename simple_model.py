@@ -19,6 +19,8 @@ from torch.autograd import Variable
 #   3. Combine these models in a new class to create stable model
 
 
+
+
 class fhat(nn.Module):
     #This is our 'nominal' model (before modifying/correcting the dynamics)
     def __init__(self, layer_sizes):
@@ -86,29 +88,15 @@ class dynamics_nonincrease(nn.Module):
         x = x.requires_grad_(True)
         fhatx = self.fhat(x)
         Vx = self.V(x)
-        # print(Vx.shape)
-        # print(fhatx.shape)
-        # print([a for a in Vx])
-        # print(x.shape)
-        # G = Vx.backward()
-        # gV = x.grad
-        # print(fx.dtype)
-        # print(F.relu((gV*(fx - x)).sum(dim = 1)))
-        # print(fhatx,Vx)
+
         # gV = torch.autograd.grad([a for a in Vx], [x], create_graph=True, only_inputs=True)[0]
-        # gV = torch.autograd.grad([a for a in Vx], [x], create_graph=True, only_inputs=True, grad_outputs=torch.ones_like(Vx))[0]
         gV = torch.autograd.grad(Vx, x, create_graph=True, only_inputs=True, grad_outputs=torch.ones_like(Vx))[0]
 
         # fx = fhatx - F.relu((gV*(fhatx - x)).sum(dim = -1))*gV/(gV**2).sum(dim=1)[:,None]
-        # print(gV.shape)
-        # print((gV*(fhatx - x)).sum(dim = -1, keepdim = True))
-        # print(torch.norm(gV, dim = -1, keepdim = True).shape)
+
         fx = fhatx - F.relu((gV*(fhatx - x)).sum(dim = -1, keepdim = True))*gV/(torch.norm(gV, dim = -1, keepdim = True)**2)
 
-        # torch.norm(x, dim = -1, keepdim = True)
-        # print(fhatx.shape)
         # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
-
 
         return fx
 
@@ -215,13 +203,9 @@ class MakePSD(nn.Module):
 
     def forward(self, x):
 
-
         smoothed_output = self.rehu(self.f(x) - self.zero)
-        # quadratic_under = self.eps*(x**2).squeeze().sum(dim = -1, keepdim = True)
-        # print(torch.norm(x.squeeze(), dim = -1, keepdim = True))
-        quadratic_under = self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
-        # print(quadratic_under, 'hello')
 
+        quadratic_under = self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
 
         return smoothed_output + quadratic_under
 

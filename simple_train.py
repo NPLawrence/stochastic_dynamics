@@ -1,5 +1,6 @@
 #A simple training procedure for deterministic models
 
+#useful video https://www.youtube.com/watch?v=pSexXMdruFM&t=650s
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -10,46 +11,43 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
+import torchvision
 from torch.utils.data import DataLoader
 
+from torch.utils.tensorboard import SummaryWriter
+
+torch.set_grad_enabled(True)
 
 import simple_model as model
 import generate_data as gen_data
 
 # gen_data.data_linear()
 
+epochs = 100
+batch_size = 128
+learning_rate = 0.001
+
 layer_sizes = np.array([2, 100, 1])
 
-fhat = model.fhat(np.array([2, 50, 50, 2]))
+# fhat = model.fhat(np.array([2, 50, 50, 2]))
+fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
+                    nn.Linear(50, 50), nn.Tanh(),
+                    nn.Linear(50, 50), nn.Tanh(),
+                    nn.Linear(50, 2))
 V = model.MakePSD(model.ICNN(layer_sizes),2)
 # f = model.dynamics_simple(fhat,V)
 f_net = model.dynamics_nonincrease(fhat,V)
 # f = model.dynamics_rootfind(fhat,V)
-params = list(f_net.parameters())
+# f_net = fhat
+
+
 
 criterion = nn.MSELoss()
 
-epochs = 100
+
 
 data = pd.read_csv("./datasets/data_linear.csv")
 
-# print(data.values)
-# data = data.columns.tolist()
-# data = torch.FloatTensor(data.values.astype('float'))
-# input, output = torch.FloatTensor(data['x_k'].values.astype('float')), torch.FloatTensor(data['x_{k+1}'].values.astype('float'))
-
-# input = torch.FloatTensor(input.values.astype('float'))
-# data = pd.read_csv("./datasets/data_linear.pkl")
-# print(data.columns.values)
-# tmp = data
-# result = torch.from_numpy(tmp)
-# x = data.values[0]
-# y = data.values[1]
-# print(x.dtype)
-# result = torch.tensor(data.values)
-# print(result)
-# input = data[:,0]
-# output = data[:,1]
 data_input = data.values[:,:2]
 data_output = data.values[:,2:]
 Trn_input,  Val_inp, Trn_target,Val_target = train_test_split(data_input, data_output, test_size=0.2,random_state=123)
@@ -60,37 +58,27 @@ Valid_data = pd.concat([pd.DataFrame(Val_inp), pd.DataFrame(Val_target)], axis=1
 train_dataset = gen_data.oversampdata(Train_data)
 valid_dataset = gen_data.oversampdata(Valid_data)
 
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = DataLoader(valid_dataset, batch_size=32, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
+
+writer = SummaryWriter('runs/linear_experiment_1')
+# get some random training images
+# dataiter = iter(train_loader)
+# input, output = dataiter.next()
+# grid = torchvision.utils.make_grid(input)
+# writer.add_image('sample_data', grid)
+# writer.add_graph(f_net, input[0])
 
 
-# gen_data.oversampdata(data)
-# input_train, input_test, output_train, output_test =\
-#     train_test_split(input, output, test_size=0.20, random_state=42)
+optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
+# f_net.train()
 
-# print(input_train[0])
-# input_train = torch.FloatTensor(input_train.astype('float'))
-# x = torch.from_numpy(input_train[0]).requires_grad_(True)
-# x= Variable(torch.from_numpy(input_train[0]).float(), requires_grad=False)
-# y = Variable(torch.from_numpy(output_train[0]).float(), requires_grad=False)
-# x = input_train[0]
-#
-# x,y = train_dataset.__getitem__(2)
-# out = f_net(x)
-#
-# loss = criterion(x,y)
-#
-# f_net.zero_grad()
-# loss.backward()
-optimizer = optim.SGD(f_net.parameters(), lr=0.001)
-# optimizer.step()
-f_net.train()
-
-for epoch in range(2):
+for epoch in range(epochs):
 
     running_loss = 0.0
 
     for i, data in enumerate(train_loader, 0):
+
 
         inputs, labels = data
         optimizer.zero_grad()
@@ -100,4 +88,12 @@ for epoch in range(2):
         optimizer.step()
         running_loss += loss.item()
 
+    writer.add_scalar('Loss', running_loss, epoch)
+    for name, weight in f_net.named_parameters():
+        writer.add_histogram(name, weight, epoch)
+        # print(f'{name}')
+        # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+
+
 print('Finished Training')
+writer.close()
