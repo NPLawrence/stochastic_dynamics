@@ -19,9 +19,9 @@ class data_linear():
 
         for i in range(num_rollout):
 
-            x = np.random.uniform(1,10,size = (1,2))
+            x = np.random.uniform(2,10,size = (1,2))
 
-            while np.dot(x,x.transpose()) > 1e-3:
+            while np.dot(x,x.transpose()) > 1e-2:
 
                 x_new = np.dot(x,A)
                 data.append(np.array((x,x_new)).reshape((1,4)).squeeze())

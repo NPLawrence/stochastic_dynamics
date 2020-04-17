@@ -30,11 +30,11 @@ batch_size = 1
 learning_rate = 0.001
 
 
-# fhat = model.fhat(np.array([2, 50, 50, 2]))
-fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
-                    nn.Linear(50, 50), nn.Tanh(),
-                    nn.Linear(50, 50), nn.Tanh(),
-                    nn.Linear(50, 2))
+fhat = model.fhat(np.array([2, 50, 50, 2]))
+# fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
+#                     nn.Linear(50, 50), nn.ReLU(),
+#                     nn.Linear(50, 50), nn.ReLU(),
+#                     nn.Linear(50, 2))
 
 layer_sizes = np.array([2, 100, 1])
 
@@ -90,6 +90,7 @@ for epoch in range(epochs):
         # outputs = rootfind(V, fhat, V(inputs), inputs)
         # print(i)
         outputs_f = f_net(inputs)
+        # print(outputs_f[0])
         loss = criterion(outputs_f, labels)
         # print(V(inputs).backward(torch.ones_like(V(inputs))))
         loss.backward()
