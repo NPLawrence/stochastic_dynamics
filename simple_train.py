@@ -23,7 +23,7 @@ import generate_data as gen_data
 # gen_data.data_linear()
 
 epochs = 100
-batch_size = 128
+batch_size = 1
 learning_rate = 0.001
 
 layer_sizes = np.array([2, 100, 1])
@@ -56,7 +56,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/linear_experiment_1')
+writer = SummaryWriter('runs/linear_experiment_3')
 # get some random training images
 # dataiter = iter(train_loader)
 # input, output = dataiter.next()
@@ -67,7 +67,7 @@ writer = SummaryWriter('runs/linear_experiment_1')
 
 criterion = nn.MSELoss()
 
-optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
+optimizer = optim.SGD(f_net.parameters(), lr=learning_rate)
 f_net.train()
 
 for epoch in range(epochs):

@@ -22,7 +22,7 @@ class plot_dynamics(nn.Module):
         self.x0 = x0
 
 
-    def get_trajectory(self, f, steps = 50):
+    def get_trajectory(self, f, steps = 100):
 
         x = self.x0
         X = torch.empty([steps,x.squeeze().size(0)])
