@@ -50,6 +50,8 @@ class rootfind_train(torch.autograd.Function):
         # x_root = (fhatx*alpha).clone().detach()
         # print(alpha)
         # print(fhatx, x)
+
+
         gV = torch.zeros_like(x)
         while (V(fhatx*alpha) - target) > 0.01:
 
@@ -116,8 +118,17 @@ class rootfind_train(torch.autograd.Function):
         # print(V(x_root*fhat(x)), x_root)
         with torch.enable_grad():
 
+            # fhatx.requires_grad_(True)
+            # x_root.requires_grad_(True)
+            # target.requires_grad_(True)
+            # gV = torch.autograd.grad(V(x_root), x_root)[0]
+            # gV.backward(torch.ones_like(gV))
+            # dummy = torch.autograd.grad(gV, x_root, grad_outputs = torch.ones_like(gV))
+            # A = torch.autograd.grad((fhatx*(V(x_root) - target)/((gV*fhatx).sum(dim = -1))), x_root,create_graph = False, retain_graph = True, allow_unused = True, only_inputs=True, grad_outputs = torch.ones_like(x_root))[0]
+            # T = (x_root - fhatx*(V(x_root) - target)/((gV*fhatx).sum(dim = -1))).requires_grad_(True)
 
-            A = torch.autograd.grad(V(x_root) - target, x_root, create_graph=True, retain_graph = True, only_inputs=True)[0]
+            # A = torch.autograd.grad((x_root - fhatx*(V(x_root) - target)/((torch.autograd.grad(V(x_root), x_root, create_graph = False, allow_unused = True, only_inputs=True)[0]*fhatx).sum(dim = -1))).requires_grad_(True), x_root, grad_outputs=torch.ones_like((x_root - fhatx*(V(x_root) - target)/(((torch.autograd.grad(V(x_root), x_root, create_graph = False, allow_unused = True, only_inputs=True)[0]).requires_grade_(True)*fhatx).sum(dim = -1))).requires_grad_(True)), create_graph=True, retain_graph = True, only_inputs=True)[0]
+            A = torch.autograd.grad(V(x_root) - target, x_root, create_graph=True, retain_graph = True, only_inputs=False, grad_outputs=torch.ones_like(V(x_root)))[0]
           # print((V(x_root*fhat(x)) - target).requires_grad)
           # print(V)
           # fhatx = fhat(x)
@@ -145,25 +156,46 @@ class rootfind_train(torch.autograd.Function):
         # print(grad_rootfind)
         return None, grad_input*dx_dw, grad_input*dx_dw, None
 
-    class rootfind_alg(torch.autograd.Function):
-    #A basic implementation of Newton's method
-        @staticmethod
-        def get_root(V,f,target,x):
+class rootfind_alg(torch.autograd.Function):
+#A basic implementation of Newton's method
 
-            fhatx = f(x)
-            alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
+    @staticmethod
+    def forward():
+        gV = torch.zeros_like(x)
+        while (V(fhatx*alpha) - target) > 0.01:
 
-            while (V(fhatx*alpha) - target) > 0.001:
+            # print('hello')
 
+            # print(y.requires_grad)
+
+            with torch.enable_grad():
                 y = fhatx*alpha
-                gV = torch.autograd.grad([a for a in V(y)], [alpha], create_graph=True, only_inputs=True)[0]
-                # gV = torch.autograd.grad([a for a in V(y)], [y], create_graph=True, only_inputs=True)[0]
-                alpha = (alpha - (V(fhatx*alpha) - target)/(gV*fhatx).sum(dim = 1))
+                y.requires_grad_(True)
+                gV = torch.autograd.grad(V(y), y, create_graph = False, allow_unused = True, only_inputs=True)[0]
+            # print(gV)
+            # print(alpha)
+            # gV = torch.autograd.grad([a for a in V(y)], [y], create_graph=True, only_inputs=True)[0]
+            alpha = alpha - (V(fhatx*alpha) - target)/((gV*fhatx).sum(dim = -1))
+            x_root = fhatx*alpha
 
-            x_root = alpha
 
-            return x_root
+    @staticmethod
+    def get_root(V,f,target,x):
 
-        # @staticmethod
-        # def g(V, target, x):
-        #     return V(x) - target
+        fhatx = f(x)
+        alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
+
+        while (V(fhatx*alpha) - target) > 0.001:
+
+            y = fhatx*alpha
+            gV = torch.autograd.grad([a for a in V(y)], [alpha], create_graph=True, only_inputs=True)[0]
+            # gV = torch.autograd.grad([a for a in V(y)], [y], create_graph=True, only_inputs=True)[0]
+            alpha = (alpha - (V(fhatx*alpha) - target)/(gV*fhatx).sum(dim = 1))
+
+        x_root = alpha
+
+        return x_root
+
+    # @staticmethod
+    # def g(V, target, x):
+    #     return V(x) - target
