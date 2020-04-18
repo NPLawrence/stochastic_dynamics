@@ -13,18 +13,22 @@ from torch.utils.data import DataLoader
 
 from torch.utils.tensorboard import SummaryWriter
 
-torch.set_grad_enabled(True)
+# from rootfind_autograd import rootfind_module
 
-import simple_model as model
+
+import rootfind_model as model
+import lyapunov_NN as L
+
 import generate_data as gen_data
+
+torch.set_grad_enabled(True)
 
 # gen_data.data_linear()
 
-epochs = 100
-batch_size = 128
+epochs = 1
+batch_size = 1
 learning_rate = 0.001
 
-layer_sizes = np.array([2, 100, 1])
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
@@ -32,8 +36,21 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
                     nn.Linear(50, 2))
 
-V = model.MakePSD(model.ICNN(layer_sizes),2)
-f_net = model.dynamics_rootfind(fhat,V)
+layer_sizes = np.array([2, 100, 1])
+
+V = L.MakePSD(L.ICNN(layer_sizes),2)
+# input = torch.randn(1,2, requires_grad=True)
+# output = V(torch.randn(1,2))
+# # print(torch.autograd.grad(V(input),input))
+# output.backward(torch.ones_like(output))
+
+# for name, weight in V.named_parameters():
+#     print(name, weight.grad)
+f_net = model.rootfind_module(fhat,V)
+
+# f_net = model.dynamics_rootfind(fhat,V)
+
+
 
 data = pd.read_csv("./datasets/data_linear.csv")
 
@@ -55,10 +72,13 @@ writer = SummaryWriter('runs/linear_experiment_1')
 criterion = nn.MSELoss()
 
 #The optimization is the key step
+# rootfind = rootfind_module.rootfind_train.apply
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
-f_net.train()
 
-f_net.train()
+images, labels = next(iter(train_loader))
+writer.add_graph(f_net, images)
+
+# f_net.train()
 
 for epoch in range(epochs):
 
@@ -66,20 +86,29 @@ for epoch in range(epochs):
 
     for i, data in enumerate(train_loader, 0):
 
-
         inputs, labels = data
         optimizer.zero_grad()
-        outputs = f_net(inputs)
-        loss = criterion(outputs, labels)
+        # self.V,self.fhat,target,root,x
+        # outputs = f_net(inputs)
+        # outputs = rootfind(V, fhat, V(inputs), inputs)
+        # print(i)
+        outputs_f = f_net(inputs)
+        # print(outputs_f[0])
+        loss = criterion(outputs_f, labels)
+        # print(V(inputs).backward(torch.ones_like(V(inputs))))
         loss.backward()
+        # print(list(f_net.parameters())[0].grad)
         optimizer.step()
         running_loss += loss.item()
 
     writer.add_scalar('Loss', running_loss, epoch)
     for name, weight in f_net.named_parameters():
         writer.add_histogram(name, weight, epoch)
+        print(name, weight.grad)
+
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+    print(epoch)
 
 
 print('Finished Training')
