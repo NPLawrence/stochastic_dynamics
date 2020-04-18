@@ -13,12 +13,12 @@ from torch.utils.data import DataLoader
 
 from torch.utils.tensorboard import SummaryWriter
 
-from rootfind_autograd import rootfind_module
+# from rootfind_autograd import rootfind_module
 
 
+import rootfind_model as model
+import lyapunov_NN as L
 
-
-import simple_model as model
 import generate_data as gen_data
 
 torch.set_grad_enabled(True)
@@ -38,7 +38,7 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
 
 layer_sizes = np.array([2, 100, 1])
 
-V = model.MakePSD(model.ICNN(layer_sizes),2)
+V = L.MakePSD(L.ICNN(layer_sizes),2)
 # input = torch.randn(1,2, requires_grad=True)
 # output = V(torch.randn(1,2))
 # # print(torch.autograd.grad(V(input),input))

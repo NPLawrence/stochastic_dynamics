@@ -6,9 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from rootfind_autograd import rootfind_module
 
-# import rootfind
 #Some code samples taken from implementation by Manek + Kolter
 
 #A simple proof of concept for convex Lyapunov functions
@@ -103,6 +101,7 @@ class dynamics_nonincrease(nn.Module):
 
 class dynamics_rootfind(nn.Module):
     #Modifies fhat using the root-find approach
+    #Not trainable! See rootfind_model.py
     def __init__(self, fhat, V):
         super().__init__()
 
@@ -164,165 +163,7 @@ class dynamics_rootfind(nn.Module):
     #
     #     input, = ctx.saved_tensors
     #     grad_input = grad_output.clone()
-class rootfind_module(nn.Module):
 
-    def __init__(self,fhat, V):
-        super().__init__()
-
-        self.V = V
-        self.fhat = fhat
-
-    def forward(self,x):
-
-
-        target = .99*self.V(x)
-        alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
-        fhatx = self.fhat(x)
-        # print(fhatx.requires_grad)
-        rootfind = rootfind_train.apply
-        x_root = rootfind(self.V, fhatx, target, x)
-        # output_f = alpha_root*fhatx
-        # raise NotImplemented
-        return x_root
-
-
-class rootfind_train(torch.autograd.Function):
-
-    @staticmethod
-    def forward(ctx,V,fhatx,target,x):
-        #just return the input -- the root is computed elsewhere
-        # ctx.save_for_backward(x)
-        ctx.V = V
-        ctx.fhatx = fhatx
-        # ctx.fhatx = (fhat(x)).clone().detach()
-        ctx.target = target
-        # ctx.alpha = alpha
-        # ctx.fhatx = fhatx
-
-
-        # print(alpha.requires_grad)
-        # fhatx.requires_grad_(True)
-
-        alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
-        # fhatx = fhat(x)
-        x_root = (fhatx*alpha).clone().detach()
-        # print(alpha)
-        # print(fhatx, x)
-        while (V(fhatx*alpha) - target) > 0.01:
-
-            # print('hello')
-
-            # print(y.requires_grad)
-            with torch.enable_grad():
-                y = fhatx*alpha
-                y.requires_grad_(True)
-                gV = torch.autograd.grad(V(y), y, create_graph = False, allow_unused = True, only_inputs=True)[0]
-
-            # print(gV)
-            # print(alpha)
-            # gV = torch.autograd.grad([a for a in V(y)], [y], create_graph=True, only_inputs=True)[0]
-            alpha = alpha - (V(fhatx*alpha) - target)/((gV*fhatx).sum(dim = -1))
-            x_root = fhatx*alpha
-
-        # print(alpha)
-        alpha_root = alpha.clone().detach().requires_grad_(True)
-        # print(alpha_root)
-
-        # print(alpha_root)
-        # print(alpha_root)
-
-        # x_root = alpha_root*fhat(x)
-        x_root = (alpha_root*fhatx).clone().detach().requires_grad_(True)
-
-        ctx.alpha_root = alpha_root
-        # print(alpha_root.requires_grad)
-
-        ctx.save_for_backward(x, x_root.clone().detach())
-
-
-        return x_root.clone().detach()
-
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        # print('hello')
-        # print(ctx.saved_tensors)
-        x, x_root= ctx.saved_tensors
-        x = x.clone().detach().requires_grad_()
-        x_root = x_root.clone().detach().requires_grad_()
-        grad_input = grad_output.clone()
-
-
-
-
-        alpha_root = ctx.alpha_root.clone()
-
-        # alpha, = ctx.saved_tensors
-
-        V = ctx.V
-        fhatx = ctx.fhatx
-        # fhatx = fhat(x)
-        target = ctx.target
-
-
-        # w = V(x_root)
-        # print(grad_input)
-
-        # with torch.enable_grad():
-        #     newton_func = rootfind_alg.g(V,target,x_root)
-
-        # print(V(x_root*fhat(x)), x_root)
-        with torch.enable_grad():
-            A = torch.autograd.grad(V(x_root) - target, x_root, create_graph=True, retain_graph = True, only_inputs=True)[0]
-          # print((V(x_root*fhat(x)) - target).requires_grad)
-          # print(V)
-          # fhatx = fhat(x)
-          # b = V(alpha_root*fhatx) - target
-          # b.backward()
-            c = torch.autograd.grad(V(alpha_root*fhatx) - target, fhatx, create_graph=True, retain_graph = True, only_inputs=False, grad_outputs=torch.ones_like(V(x_root)))[0]
-            b = torch.autograd.grad(V(alpha_root*fhatx) - target, target, create_graph=True, retain_graph = True, only_inputs=False, grad_outputs=torch.ones_like(V(x_root)))[0]
-          # b = V(x).backward(torch.ones_like(V(x)))
-          # b = torch.autograd.grad((V(x_root*x) - target), x, create_graph=True, only_inputs=True)[0]
-          # print(b)
-        # for name, weight in V.named_parameters():
-        #
-        #     weight.grad = weight.grad/A
-            # print(name, weight.grad)
-        # print(A)
-        # print(b)
-
-        dx_dw = b.clone().detach()/A.clone().detach()
-        dx_dv = c.clone().detach()/A.clone().detach()
-
-        # grad_rootfind = [weight.grad/A for weight in V.named_parameters()]
-        grad_rootfind = grad_input*dx_dw #apply chain rule
-        # grad_root = grad_rootfind.clone()
-
-        # print(grad_rootfind)
-        return None, grad_input*dx_dw, grad_input*dx_dw, None
-
-    class rootfind_alg(torch.autograd.Function):
-    #A basic implementation of Newton's method
-        @staticmethod
-        def get_root(V,f,target,x):
-
-            fhatx = f(x)
-            alpha = torch.tensor([1], dtype = torch.float, requires_grad = True)
-
-            while (V(fhatx*alpha) - target) > 0.001:
-
-                y = fhatx*alpha
-                gV = torch.autograd.grad([a for a in V(y)], [alpha], create_graph=True, only_inputs=True)[0]
-                # gV = torch.autograd.grad([a for a in V(y)], [y], create_graph=True, only_inputs=True)[0]
-                alpha = (alpha - (V(fhatx*alpha) - target)/(gV*fhatx).sum(dim = 1))
-
-            x_root = alpha
-
-            return x_root
-
-        # @staticmethod
-        # def g(V, target, x):
-        #     return V(x) - target
 
 
 
@@ -361,67 +202,3 @@ class dynamics_stochastic(nn.Module):
             # print(h)
 
         return f_rand*alpha
-
-
-
-
-class ReHU(nn.Module):
-    """ Rectified Huber unit"""
-    def __init__(self, d):
-        super().__init__()
-        self.a = 1/d
-        self.b = -d/2
-
-    def forward(self, x):
-        # print(torch.max(torch.clamp(torch.sign(x)*self.a/2*x**2,min=0,max=-self.b),x+self.b))
-        return torch.max(torch.clamp(torch.sign(x)*self.a/2*x**2,min=0,max=-self.b),x+self.b)
-
-class MakePSD(nn.Module):
-    def __init__(self, f, n, eps=0.01, d=1.0):
-        super().__init__()
-        self.f = f
-        self.zero = torch.nn.Parameter(f(torch.zeros((1,1,n))), requires_grad=False)
-        self.eps = eps
-        self.d = d
-        self.rehu = ReHU(self.d)
-
-    def forward(self, x):
-
-        smoothed_output = self.rehu(self.f(x) - self.zero)
-
-        quadratic_under = self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
-
-        return smoothed_output + quadratic_under
-
-class ICNN(nn.Module):
-    def __init__(self, layer_sizes, activation=F.relu_):
-        super().__init__()
-        self.W = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
-                                   for l in layer_sizes[1:]])
-        self.U = nn.ParameterList([nn.Parameter(torch.Tensor(layer_sizes[i+1], layer_sizes[i]))
-                                   for i in range(1,len(layer_sizes)-1)])
-        self.bias = nn.ParameterList([nn.Parameter(torch.Tensor(l)) for l in layer_sizes[1:]])
-
-        self.act = activation
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        # copying from PyTorch Linear
-        for W in self.W:
-            nn.init.kaiming_uniform_(W, a=5**0.5)
-        for U in self.U:
-            nn.init.kaiming_uniform_(U, a=5**0.5)
-        for i,b in enumerate(self.bias):
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.W[i])
-            bound = 1 / (fan_in**0.5)
-            nn.init.uniform_(b, -bound, bound)
-
-    def forward(self, x):
-        z = F.linear(x, self.W[0], self.bias[0])
-        z = self.act(z)
-
-        for W,b,U in zip(self.W[1:-1], self.bias[1:-1], self.U[:-1]):
-            z = F.linear(x, W, b) + F.linear(z, F.softplus(U)) / U.shape[0]
-            z = self.act(z)
-
-        return F.linear(x, self.W[-1], self.bias[-1]) + F.linear(z, F.softplus(self.U[-1])) / self.U[-1].shape[0]

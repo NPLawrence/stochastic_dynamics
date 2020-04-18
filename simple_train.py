@@ -18,6 +18,8 @@ from torch.utils.tensorboard import SummaryWriter
 torch.set_grad_enabled(True)
 
 import simple_model as model
+import lyapunov_NN as L
+
 import generate_data as gen_data
 
 # gen_data.data_linear()
@@ -33,7 +35,7 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
                     nn.Linear(50, 2))
-V = model.MakePSD(model.ICNN(layer_sizes),2)
+V = L.MakePSD(L.ICNN(layer_sizes),2)
 f_net = model.dynamics_simple(fhat,V)
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
