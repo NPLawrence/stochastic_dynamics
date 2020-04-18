@@ -23,7 +23,7 @@ import generate_data as gen_data
 # gen_data.data_linear()
 
 epochs = 100
-batch_size = 1
+batch_size = 128
 learning_rate = 0.001
 
 layer_sizes = np.array([2, 100, 1])
@@ -34,8 +34,8 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
                     nn.Linear(50, 2))
 V = model.MakePSD(model.ICNN(layer_sizes),2)
-# f = model.dynamics_simple(fhat,V)
-f_net = model.dynamics_nonincrease(fhat,V)
+f_net = model.dynamics_simple(fhat,V)
+# f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
 
@@ -56,7 +56,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/linear_experiment_3')
+writer = SummaryWriter('runs/linear_experiment_2')
 # get some random training images
 # dataiter = iter(train_loader)
 # input, output = dataiter.next()
@@ -68,6 +68,9 @@ writer = SummaryWriter('runs/linear_experiment_3')
 criterion = nn.MSELoss()
 
 optimizer = optim.SGD(f_net.parameters(), lr=learning_rate)
+
+
+
 f_net.train()
 
 for epoch in range(epochs):
@@ -91,6 +94,7 @@ for epoch in range(epochs):
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-
+images, labels = next(iter(train_loader))
+writer.add_graph(f_net, images)
 print('Finished Training')
 writer.close()

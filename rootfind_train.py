@@ -25,16 +25,16 @@ torch.set_grad_enabled(True)
 
 # gen_data.data_linear()
 
-epochs = 10
+epochs = 1
 batch_size = 1
 learning_rate = 0.001
 
 
-fhat = model.fhat(np.array([2, 50, 50, 2]))
-# fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
-#                     nn.Linear(50, 50), nn.ReLU(),
-#                     nn.Linear(50, 50), nn.ReLU(),
-#                     nn.Linear(50, 2))
+# fhat = model.fhat(np.array([2, 50, 50, 2]))
+fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
+                    nn.Linear(50, 50), nn.Tanh(),
+                    nn.Linear(50, 50), nn.Tanh(),
+                    nn.Linear(50, 2))
 
 layer_sizes = np.array([2, 100, 1])
 
@@ -75,6 +75,9 @@ criterion = nn.MSELoss()
 # rootfind = rootfind_module.rootfind_train.apply
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
 
+images, labels = next(iter(train_loader))
+writer.add_graph(f_net, images)
+
 # f_net.train()
 
 for epoch in range(epochs):
@@ -94,14 +97,18 @@ for epoch in range(epochs):
         loss = criterion(outputs_f, labels)
         # print(V(inputs).backward(torch.ones_like(V(inputs))))
         loss.backward()
+        # print(list(f_net.parameters())[0].grad)
         optimizer.step()
         running_loss += loss.item()
 
     writer.add_scalar('Loss', running_loss, epoch)
     for name, weight in f_net.named_parameters():
         writer.add_histogram(name, weight, epoch)
+        print(name, weight.grad)
+
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+    print(epoch)
 
 
 print('Finished Training')
