@@ -32,7 +32,7 @@ V = L.MakePSD(L.ICNN(layer_sizes),2)
 # V = torch.load(PATH_V)
 # fhat = torch.load(PATH_f)
 # f = model.dynamics_simple(fhat,V)
-# f = model.dynamics_nonincrease(fhat,V)
+f = model.dynamics_nonincrease(fhat,V)
 
 
 # f_net = Net()
@@ -41,7 +41,7 @@ V = L.MakePSD(L.ICNN(layer_sizes),2)
 
 # f = model.dynamics_rootfind(fhat,V)
 
-f = rootfind_model.rootfind_module(fhat,V)
+# f = rootfind_model.rootfind_module(fhat,V)
 
 # f = model.dynamics_stochastic(fhat,V)
 # x0 = 2.5*torch.randn([1,2], dtype = torch.float)

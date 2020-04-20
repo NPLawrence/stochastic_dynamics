@@ -26,8 +26,8 @@ torch.set_grad_enabled(True)
 # gen_data.data_linear()
 
 epochs = 15
-batch_size = 1
-learning_rate = 0.001
+batch_size = 64
+learning_rate = 0.01
 
 
 # fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
@@ -65,11 +65,13 @@ test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
 writer = SummaryWriter('runs/linear_experiment_1')
 
-criterion = nn.MSELoss()
+criterion_usual = nn.MSELoss()
+criterion_rootfind = nn.MSELoss()
+criterion = criterion_usual
 
 #The optimization is the key step
 # rootfind = rootfind_module.rootfind_train.apply
-optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
+optimizer = optim.SGD(f_net.parameters(), lr=learning_rate)
 
 # images, labels = next(iter(train_loader))
 # writer.add_graph(f_net, images)
@@ -83,24 +85,42 @@ for epoch in range(epochs):
     for i, data in enumerate(train_loader, 0):
 
         inputs, labels = data
+        inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, labels)
         optimizer.zero_grad()
-        # self.V,self.fhat,target,root,x
-        # outputs = f_net(inputs)
-        # outputs = rootfind(V, fhat, V(inputs), inputs)
-        # print(i)
-        outputs_f = f_net(inputs)
-        # print(outputs_f[0])
-        loss = criterion(outputs_f, labels)
-        # print(V(inputs).backward(torch.ones_like(V(inputs))))
+        if inputs_usual.shape[0] == 0:
+            outputs_rootfind = f_net(inputs_rootfind)
+            # print('0', outputs_rootfind.shape, labels_rootfind.shape)
+            loss = criterion(outputs_rootfind, labels_rootfind)
+        elif inputs_rootfind.shape[0] == 0:
+            outputs_usual = fhat(inputs_usual)
+            # print('1', outputs_usual.shape, labels_usual.shape)
+            loss = criterion(outputs_usual, labels_usual)
+        else:
+            outputs_rootfind = f_net(inputs_rootfind)
+            loss_rootfind = criterion(outputs_rootfind, labels_rootfind)
+            outputs_usual = fhat(inputs_usual)
+            loss_usual = criterion(outputs_usual, labels_usual)
+            loss = loss_rootfind + loss_usual
+
+        # outputs_usual = fhat(inputs_usual)
+        # outputs_rootfind = f_net(inputs_rootfind)
+        # loss_usual = criterion(outputs_usual, labels_usual)
+        # loss_rootfind = criterion(outputs_rootfind, labels_rootfind)
+        # loss = loss_usual + loss_rootfind
         loss.backward()
-        # print(list(f_net.parameters())[0].grad)
         optimizer.step()
         running_loss += loss.item()
 
     writer.add_scalar('Loss', running_loss, epoch)
-    # for name, weight in f_net.named_parameters():
-    #     writer.add_histogram(name, weight, epoch)
-        # print(name, weight.grad)
+    for name, weight in f_net.named_parameters():
+        writer.add_histogram(name, weight, epoch)
+
+    # for name, weight in V.f.named_parameters():
+    #
+    #     print(name, weight.grad)
+
+
+
 
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)

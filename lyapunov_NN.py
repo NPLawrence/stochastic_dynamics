@@ -11,12 +11,37 @@ class ReHU(nn.Module):
     """ Rectified Huber unit"""
     def __init__(self, d):
         super().__init__()
-        self.a = 1/d
+        self.a = 1/(2*d)
         self.b = -d/2
 
     def forward(self, x):
-        # print(torch.max(torch.clamp(torch.sign(x)*self.a/2*x**2,min=0,max=-self.b),x+self.b))
-        return torch.max(torch.clamp(torch.sign(x)*self.a/2*x**2,min=0,max=-self.b),x+self.b)
+
+        return torch.max(torch.clamp(torch.sign(x)*(self.a)*x**2,min=0,max=-self.b),x+self.b)
+
+# class ReHU(torch.autograd.Function):
+#     #Re-implementation of the above
+#     @staticmethod
+#     def forward(ctx, x):
+#         x.requires_grad_(True)
+#         d = 1
+#         ctx.d = d
+#         a = 1/(2*d)
+#         b = -d/2
+#         output = torch.max(torch.clamp(torch.sign(x)*(a)*x**2,min=0,max=-b),x+b)
+#         ctx.save_for_backward(x, output)
+#         return output
+#
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#
+#         x, output = ctx.saved_tensors
+#         d = ctx.d
+#         grad_input = grad_output.clone()
+#         m = torch.clamp(x/d, min=0, max=1)
+#         grad_input *= m
+#
+#         return grad_input
+
 
 class MakePSD(nn.Module):
     def __init__(self, f, n, eps=0.01, d=1.0):
@@ -25,6 +50,7 @@ class MakePSD(nn.Module):
         self.zero = torch.nn.Parameter(f(torch.zeros((1,1,n))), requires_grad=False)
         self.eps = eps
         self.d = d
+        # self.rehu = ReHU.apply
         self.rehu = ReHU(self.d)
 
     def forward(self, x):
