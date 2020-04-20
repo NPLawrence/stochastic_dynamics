@@ -96,7 +96,6 @@ class dynamics_nonincrease(nn.Module):
         fx = self.fhat(x) - F.relu((gV*(self.fhat(x) - x)).sum(dim = -1, keepdim = True))*gV/(torch.norm(gV, dim = -1, keepdim = True)**2)
 
         # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
-
         return fx
 
 class dynamics_rootfind(nn.Module):

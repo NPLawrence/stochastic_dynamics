@@ -15,7 +15,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 # from rootfind_autograd import rootfind_module
 
-
+import simple_model
 import rootfind_model as model
 import lyapunov_NN as L
 
@@ -25,18 +25,16 @@ torch.set_grad_enabled(True)
 
 # gen_data.data_linear()
 
-epochs = 1
+epochs = 15
 batch_size = 1
 learning_rate = 0.001
 
 
-# fhat = model.fhat(np.array([2, 50, 50, 2]))
+# fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
 fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
-                    nn.Linear(50, 50), nn.Tanh(),
                     nn.Linear(50, 2))
-
-layer_sizes = np.array([2, 100, 1])
+layer_sizes = np.array([2, 50, 1])
 
 V = L.MakePSD(L.ICNN(layer_sizes),2)
 # input = torch.randn(1,2, requires_grad=True)
@@ -48,9 +46,7 @@ V = L.MakePSD(L.ICNN(layer_sizes),2)
 #     print(name, weight.grad)
 f_net = model.rootfind_module(fhat,V)
 
-# f_net = model.dynamics_rootfind(fhat,V)
-
-
+# f_net = fhat
 
 data = pd.read_csv("./datasets/data_linear.csv")
 
@@ -75,8 +71,8 @@ criterion = nn.MSELoss()
 # rootfind = rootfind_module.rootfind_train.apply
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
 
-images, labels = next(iter(train_loader))
-writer.add_graph(f_net, images)
+# images, labels = next(iter(train_loader))
+# writer.add_graph(f_net, images)
 
 # f_net.train()
 
@@ -102,13 +98,13 @@ for epoch in range(epochs):
         running_loss += loss.item()
 
     writer.add_scalar('Loss', running_loss, epoch)
-    for name, weight in f_net.named_parameters():
-        writer.add_histogram(name, weight, epoch)
-        print(name, weight.grad)
+    # for name, weight in f_net.named_parameters():
+    #     writer.add_histogram(name, weight, epoch)
+        # print(name, weight.grad)
 
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
-    print(epoch)
+    print("Epoch: ", epoch, "Running loss: ", running_loss)
 
 
 print('Finished Training')
