@@ -6,9 +6,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-
-#Some code samples taken from implementation by Manek + Kolter
-
 #A simple proof of concept for convex Lyapunov functions
 #   -no training, just defining and visualizing a stable deterministic system
 

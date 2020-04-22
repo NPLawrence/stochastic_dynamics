@@ -23,11 +23,11 @@ import generate_data as gen_data
 
 torch.set_grad_enabled(True)
 
-# gen_data.data_linear()
+gen_data.data_linear()
 
 epochs = 15
 batch_size = 64
-learning_rate = 0.01
+learning_rate = 0.001
 
 
 # fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
@@ -71,10 +71,10 @@ criterion = criterion_usual
 
 #The optimization is the key step
 # rootfind = rootfind_module.rootfind_train.apply
-optimizer = optim.SGD(f_net.parameters(), lr=learning_rate)
+optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
 
-# images, labels = next(iter(train_loader))
-# writer.add_graph(f_net, images)
+images, labels = next(iter(train_loader))
+writer.add_graph(f_net, images)
 
 # f_net.train()
 
@@ -102,11 +102,9 @@ for epoch in range(epochs):
             loss_usual = criterion(outputs_usual, labels_usual)
             loss = loss_rootfind + loss_usual
 
-        # outputs_usual = fhat(inputs_usual)
-        # outputs_rootfind = f_net(inputs_rootfind)
-        # loss_usual = criterion(outputs_usual, labels_usual)
-        # loss_rootfind = criterion(outputs_rootfind, labels_rootfind)
-        # loss = loss_usual + loss_rootfind
+        # outputs = fhat(inputs)
+        # loss = criterion(outputs, labels)
+
         loss.backward()
         optimizer.step()
         running_loss += loss.item()

@@ -17,13 +17,13 @@ class newton_iter(nn.Module):
 
     def forward(self, fhatx, target, alpha):
 
-        alpha = alpha.requires_grad_(True)
-        fhatx.requires_grad_(True)
-        target.requires_grad_(True)
+        alpha.clone().detach().requires_grad_()
+        fhatx.clone().detach().requires_grad_()
+        target.clone().detach().requires_grad_()
         Vfx = self.V(fhatx*alpha)
-
+        Vfx.clone().detach().requires_grad_()
         with torch.enable_grad():
-            dV_da = torch.autograd.grad(Vfx, alpha, create_graph = True, grad_outputs=torch.ones_like(Vfx))[0]
+            dV_da = torch.autograd.grad(Vfx, alpha, create_graph = False, grad_outputs=torch.ones_like(Vfx))[0]
 
         F = alpha - (self.V(fhatx*alpha) - target)/dV_da
 
@@ -80,7 +80,7 @@ class rootfind_train(torch.autograd.Function):
             a = alpha[i].clone().detach().requires_grad_(True)
             fx = fhatx[i].clone().detach().requires_grad_(True)
             t = target[i].clone().detach().requires_grad_(True)
-            while (V(fx*a) - t) > 0.0001:
+            while (V(fx*a) - t) > 0.001:
 
                 with torch.enable_grad():
                     a = F(fx,t,a)
@@ -108,18 +108,29 @@ class rootfind_train(torch.autograd.Function):
         F = ctx.F
 
         with torch.enable_grad():
-            #Calculations for implicity differentiation on the fixed point alpha = F(alpha)
+            #Calculations for implicity differentiation on the fixed point assuming alpha = F(alpha)
             Fx = F(fhatx, target, alpha)
-            A_f = torch.autograd.grad(Fx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
-            A_t = torch.autograd.grad(Fx, target, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
-            b = torch.autograd.grad(Fx, alpha, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
-            a = torch.autograd.grad(fhatx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(fhatx))[0]
+            x_root = Fx*fhatx
 
-        dF_df = A_f/(1-b)
-        dF_dt = A_t/(1-b)
+            A_f = torch.autograd.grad(x_root, fhatx, create_graph=False, retain_graph = True, grad_outputs=grad_input)[0]
+            A_t = torch.autograd.grad(x_root, target, create_graph=False, retain_graph = True, grad_outputs=grad_input)[0]
 
-        grad_rootfind_f = grad_input*(a*alpha + fhatx*dF_df)
-        grad_rootfind_t = grad_input*fhatx*dF_dt
+            # A_f = torch.autograd.grad(Fx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            # A_t = torch.autograd.grad(Fx, target, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            # b = torch.autograd.grad(Fx, alpha, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            # a = torch.autograd.grad(fhatx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(fhatx))[0]
+        # a = torch.ones_like(fhatx)
+
+        # dF_df = A_f/(1-b)
+        # dF_dt = A_t/(1-b)
+
+        #Theoretically we get b = 0 (above) at a fixed point whenever alpha is not a critical point
+        #since alpha is only a critical point at 0, we can say b = 0
+        dF_df = A_f
+        dF_dt = A_t
+
+        # grad_rootfind_f = grad_input*(alpha + fhatx*B)
+        # grad_rootfind_t = grad_input*fhatx*dF_dt
 
         #we only need to differentiate w.r.t fhatx, target
-        return None, None, grad_rootfind_f, grad_rootfind_t, None
+        return None, None, dF_df, dF_dt, None

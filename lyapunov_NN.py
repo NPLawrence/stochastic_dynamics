@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+#Taken from Manek + Kolter, with some modifications
+#   https://github.com/locuslab/stable_dynamics
 
 class ReHU(nn.Module):
     """ Rectified Huber unit"""
