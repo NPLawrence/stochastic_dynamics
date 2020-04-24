@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import torchvision
+# import torchvision
 from torch.utils.data import DataLoader
 
 from torch.utils.tensorboard import SummaryWriter
@@ -25,30 +25,27 @@ import generate_data as gen_data
 # gen_data.data_linear()
 
 epochs = 15
-batch_size = 1
+batch_size = 32
 learning_rate = 0.001
 
-layer_sizes = np.array([2, 100, 1])
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
-                    nn.Linear(50, 50), nn.Tanh(),
                     nn.Linear(50, 2))
-V = L.MakePSD(L.ICNN(layer_sizes),2)
+layer_sizes = np.array([2, 50, 1])
+ICNN = L.ICNN(layer_sizes)
+V = L.MakePSD(ICNN,2)
 # f_net = model.dynamics_simple(fhat,V)
-
-PATH_V = './saved_models/simple_test_V.pth'
-PATH_f = './saved_models/simple_test_f.pth'
+PATH_ICNN = './saved_models/simple_test_ICNNhat.pth'
+PATH_V = './saved_models/simple_test_Vhat.pth'
+PATH_f = './saved_models/simple_test_fhat.pth'
 # torch.save(f_net.state_dict(), PATH)
-torch.save(V, PATH_V)
-torch.save(fhat, PATH_f)
 
+# f_net = model.dynamics_simple(fhat,V)
 
 # f_net = model.dynamics_nonincrease(fhat,V)
 f_net = fhat
-
-
 
 
 data = pd.read_csv("./datasets/data_linear.csv")
@@ -66,7 +63,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/linear_experiment_2')
+writer = SummaryWriter('runs/linear_experiment_3')
 # get some random training images
 # dataiter = iter(train_loader)
 # input, output = dataiter.next()
@@ -107,3 +104,7 @@ for epoch in range(epochs):
 # writer.add_graph(f_net, images)
 print('Finished Training')
 writer.close()
+
+torch.save(ICNN.state_dict(), PATH_ICNN)
+torch.save(V.state_dict(), PATH_V)
+torch.save(fhat.state_dict(), PATH_f)

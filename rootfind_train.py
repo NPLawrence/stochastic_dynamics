@@ -36,7 +36,8 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 2))
 layer_sizes = np.array([2, 50, 1])
 
-V = L.MakePSD(L.ICNN(layer_sizes),2)
+ICNN = L.ICNN(layer_sizes)
+V = L.MakePSD(ICNN,2)
 # input = torch.randn(1,2, requires_grad=True)
 # output = V(torch.randn(1,2))
 # # print(torch.autograd.grad(V(input),input))
@@ -45,6 +46,10 @@ V = L.MakePSD(L.ICNN(layer_sizes),2)
 # for name, weight in V.named_parameters():
 #     print(name, weight.grad)
 f_net = model.rootfind_module(fhat,V)
+
+PATH_ICNN = './saved_models/rootfind_test_ICNN.pth'
+PATH_V = './saved_models/rootfind_test_V.pth'
+PATH_f = './saved_models/rootfind_test_f.pth'
 
 # f_net = fhat
 
@@ -127,3 +132,7 @@ for epoch in range(epochs):
 
 print('Finished Training')
 writer.close()
+
+torch.save(ICNN.state_dict(), PATH_ICNN)
+torch.save(V.state_dict(), PATH_V)
+torch.save(fhat.state_dict(), PATH_f)
