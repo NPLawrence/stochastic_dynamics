@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from copy import deepcopy
 
 import torch
 import torch.nn as nn
@@ -17,9 +18,9 @@ class newton_iter(nn.Module):
 
     def forward(self, fhatx, target, alpha):
 
-        alpha.clone().detach().requires_grad_()
-        fhatx.clone().detach().requires_grad_()
-        target.clone().detach().requires_grad_()
+        # alpha.clone().detach().requires_grad_()
+        # fhatx.clone().detach().requires_grad_()
+        # target.clone().detach().requires_grad_()
         Vfx = self.V(fhatx*alpha)
         Vfx.clone().detach().requires_grad_()
         with torch.enable_grad():
@@ -28,7 +29,6 @@ class newton_iter(nn.Module):
         F = alpha - (self.V(fhatx*alpha) - target)/dV_da
 
         return F
-
 
 class rootfind_module(nn.Module):
     #This is where we bring together:
@@ -68,6 +68,9 @@ class rootfind_train(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx,V,F,fhatx,target,x):
+        #Implementation of Newton's method combined with bisection method
+        #   Newton's method is not guaranteed to converge in the case of nonconvex Lyapunov function,
+        #   but the bisection method is
         ctx.V = V
         ctx.F = F
 
@@ -77,13 +80,33 @@ class rootfind_train(torch.autograd.Function):
         #Since V(fhatx*1) > target, we stop iterating when we get sufficiently
         #   close to within the level set
         for i in range(alpha.shape[0]):
-            a = alpha[i].clone().detach().requires_grad_(True)
-            fx = fhatx[i].clone().detach().requires_grad_(True)
-            t = target[i].clone().detach().requires_grad_(True)
-            while (V(fx*a) - t) > 0.001:
+            a = alpha[i].requires_grad_(True)
+            fx = fhatx[i].requires_grad_(True)
+            t = target[i].requires_grad_(True)
+            end_1 = torch.zeros_like(a, requires_grad = True)
+            end_2 = a
+            iter = 0
+            while torch.abs(ctx.V(fx*a) - t) > 0.001 and iter < 100:
 
                 with torch.enable_grad():
-                    a = F(fx,t,a)
+                    a = ctx.F(fx,t,a)
+
+                #bisection method
+                if a<end_1 or a>end_2:
+                    a = end_1 + (end_2 - end_1)/2
+                    if np.sign(ctx.V(fx*a) - t)*np.sign(ctx.V(fx*end_1) - t) < 0:
+                        end_1 = end_1
+                        end_2 = a
+                    elif np.sign(ctx.V(fx*a) - t)*np.sign(ctx.V(fx*end_2) - t) < 0:
+                        end_1 = a
+                        end_2 = end_2
+                    elif ctx.V(fx*a) - t == 0:
+                        a = a
+                    else:
+                        print("Bisection fails")
+                    a.requires_grad_(True)
+                    # print('bisection used')
+                iter += 1
 
             x_root[i] = fx*a
             alpha[i] = a

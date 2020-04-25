@@ -47,9 +47,9 @@ V = L.MakePSD(ICNN,2)
 #     print(name, weight.grad)
 f_net = model.rootfind_module(fhat,V)
 
-PATH_ICNN = './saved_models/rootfind_test_ICNN.pth'
-PATH_V = './saved_models/rootfind_test_V.pth'
-PATH_f = './saved_models/rootfind_test_f.pth'
+PATH_ICNN = './saved_models/rootfind_test_ICNN_binewton.pth'
+PATH_V = './saved_models/rootfind_test_V_binewton.pth'
+PATH_f = './saved_models/rootfind_test_f_binewton.pth'
 
 # f_net = fhat
 
@@ -68,7 +68,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/linear_experiment_1')
+writer = SummaryWriter('runs/linear_experiment_binewton')
 
 criterion_usual = nn.MSELoss()
 criterion_rootfind = nn.MSELoss()
@@ -77,9 +77,6 @@ criterion = criterion_usual
 #The optimization is the key step
 # rootfind = rootfind_module.rootfind_train.apply
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
-
-images, labels = next(iter(train_loader))
-writer.add_graph(f_net, images)
 
 # f_net.train()
 
@@ -131,6 +128,10 @@ for epoch in range(epochs):
 
 
 print('Finished Training')
+
+inputs, outputs = next(iter(train_loader))
+inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, outputs)
+writer.add_graph(f_net, inputs_rootfind)
 writer.close()
 
 torch.save(ICNN.state_dict(), PATH_ICNN)
