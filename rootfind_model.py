@@ -18,9 +18,6 @@ class newton_iter(nn.Module):
 
     def forward(self, fhatx, target, alpha):
 
-        # alpha.clone().detach().requires_grad_()
-        # fhatx.clone().detach().requires_grad_()
-        # target.clone().detach().requires_grad_()
         Vfx = self.V(fhatx*alpha)
         Vfx.clone().detach().requires_grad_()
         with torch.enable_grad():
@@ -74,42 +71,54 @@ class rootfind_train(torch.autograd.Function):
         ctx.V = V
         ctx.F = F
 
-        alpha = torch.ones(size = (x.shape[0], 1, 1), requires_grad = True)
-        x_root = (fhatx*alpha)
+        alpha_temp = torch.ones(size = (x.shape[0], 1, 1), requires_grad = True)
 
-        #Since V(fhatx*1) > target, we stop iterating when we get sufficiently
+        # Since V(fhatx*1) > target, we stop iterating when we get sufficiently
         #   close to within the level set
-        for i in range(alpha.shape[0]):
-            a = alpha[i].requires_grad_(True)
-            fx = fhatx[i].requires_grad_(True)
-            t = target[i].requires_grad_(True)
-            end_1 = torch.zeros_like(a, requires_grad = True)
-            end_2 = a
-            iter = 0
-            while torch.abs(ctx.V(fx*a) - t) > 0.001 and iter < 100:
+        m = (ctx.V(fhatx*alpha_temp) - target > 0.0).squeeze()
+        end_1 = torch.zeros_like(alpha_temp, requires_grad = False)
+        end_2 = torch.ones_like(alpha_temp, requires_grad = False)
+        iter = 0
 
-                with torch.enable_grad():
-                    a = ctx.F(fx,t,a)
+        while m.nonzero().shape[0] > 0 and iter < 100:
 
-                #bisection method
-                if a<end_1 or a>end_2:
-                    a = end_1 + (end_2 - end_1)/2
-                    if np.sign(ctx.V(fx*a) - t)*np.sign(ctx.V(fx*end_1) - t) < 0:
-                        end_1 = end_1
-                        end_2 = a
-                    elif np.sign(ctx.V(fx*a) - t)*np.sign(ctx.V(fx*end_2) - t) < 0:
-                        end_1 = a
-                        end_2 = end_2
-                    elif ctx.V(fx*a) - t == 0:
-                        a = a
-                    else:
-                        print("Bisection fails")
-                    a.requires_grad_(True)
-                    # print('bisection used')
-                iter += 1
+            a = alpha_temp[torch.where(m)].requires_grad_(True)
+            fx = fhatx[torch.where(m)].requires_grad_(True)
+            t = target[torch.where(m)].requires_grad_(True)
+            with torch.enable_grad():
+                a = ctx.F(fx,t,a) #take Newton step
 
-            x_root[i] = fx*a
-            alpha[i] = a
+            alpha_temp[torch.where(m)] = a
+
+            #bisection method
+            m1_bisec = (alpha_temp<end_1).squeeze()
+            m2_bisec = (alpha_temp>end_2).squeeze()
+            m_bisec = ((m1_bisec + m2_bisec) > 0)
+            if m_bisec.nonzero().shape[0] > 0: #check if bisection is necessary
+
+                a_bisec = end_1[torch.where(m_bisec)] + (end_2[torch.where(m_bisec)] - end_1[torch.where(m_bisec)])/2
+                fx_bisec = fhatx[torch.where(m_bisec)]
+                t_bisec = target[torch.where(m_bisec)]
+                end1_temp = end_1[torch.where(m_bisec)]
+                end2_temp = end_2[torch.where(m_bisec)]
+
+                m_end2 = (np.sign(ctx.V(fx_bisec*a_bisec) - t_bisec)*np.sign(ctx.V(fx_bisec*end1_temp) - t_bisec) < 0).squeeze()
+                m_end1 = (np.sign(ctx.V(fx_bisec*a_bisec) - t_bisec)*np.sign(ctx.V(fx_bisec*end2_temp) - t_bisec) < 0).squeeze()
+
+                end_1[torch.where(m_end2)] = end_1[torch.where(m_end2)]
+                end_2[torch.where(m_end2)] = a_bisec[torch.where(m_end2)]
+
+                end_1[torch.where(m_end1)] = a_bisec[torch.where(m_end1)]
+                end_2[torch.where(m_end1)] = end_2[torch.where(m_end1)]
+
+                alpha_temp[torch.where(m_bisec)] = a_bisec.requires_grad_(True)
+
+            m = (torch.abs(ctx.V(fhatx*alpha_temp) - target) > 0.0001).squeeze()
+
+            iter += 1
+
+        alpha = alpha_temp.clone().detach().requires_grad_(True)
+        x_root = (fhatx*alpha)
 
         ctx.alpha = alpha
 

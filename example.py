@@ -47,9 +47,6 @@ f = rootfind_model.rootfind_module(fhat,V)
 # f = model.dynamics_stochastic(fhat,V)
 x0 = 5*torch.randn([1,2], dtype = torch.float)
 
-
-
-
 # x0 = torch.tensor([[[5,5]]], dtype = torch.float)
 
 plotting = vis.plot_dynamics(f,V,x0)

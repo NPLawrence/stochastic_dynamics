@@ -47,9 +47,9 @@ V = L.MakePSD(ICNN,2)
 #     print(name, weight.grad)
 f_net = model.rootfind_module(fhat,V)
 
-PATH_ICNN = './saved_models/rootfind_test_ICNN_binewton.pth'
-PATH_V = './saved_models/rootfind_test_V_binewton.pth'
-PATH_f = './saved_models/rootfind_test_f_binewton.pth'
+PATH_ICNN = './saved_models/rootfind_test_ICNN_test.pth'
+PATH_V = './saved_models/rootfind_test_V_test.pth'
+PATH_f = './saved_models/rootfind_test_f_test.pth'
 
 # f_net = fhat
 
@@ -68,7 +68,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/linear_experiment_binewton')
+writer = SummaryWriter('runs/linear_experiment_test')
 
 criterion_usual = nn.MSELoss()
 criterion_rootfind = nn.MSELoss()
