@@ -31,15 +31,20 @@ class rootfind_module(nn.Module):
     #This is where we bring together:
     #   1. The Newton iteration function (newton_iter)
     #   2. The custom autograd function for backprop though Newton's method (rootfind_train)
-    def __init__(self,fhat, V, beta = 0.99):
+    def __init__(self, fhat, V, beta = 0.99):
         super().__init__()
 
         self.V = V
         self.fhat = fhat
         self.beta = beta
+        # self.b = nn.Parameter(torch.tensor([10], dtype = torch.float))
+        # # self.b = nn.Parameter(torch.randn([1,1]))
+        # self.beta = torch.sigmoid(self.b)
+
+
         self.F = newton_iter(self.fhat, self.V)
 
-    def forward(self,x):
+    def forward(self, x):
 
         fhatx = self.fhat(x)
         target = self.beta*self.V(x)
@@ -71,17 +76,20 @@ class rootfind_train(torch.autograd.Function):
         ctx.V = V
         ctx.F = F
 
+        # tol = torch.clamp(target*((1-0.99)/0.99), max = 0.000001)
+        tol = 0.0001
+
         alpha_temp = torch.ones(size = (x.shape[0], 1, 1), requires_grad = True)
 
         # Since V(fhatx*1) > target, we stop iterating when we get sufficiently
         #   close to within the level set
-        m = (ctx.V(fhatx*alpha_temp) - target > 0.0).squeeze()
+        m = (ctx.V(fhatx) - target > 0.0).squeeze()
         end_1 = torch.zeros_like(alpha_temp, requires_grad = False)
         end_2 = torch.ones_like(alpha_temp, requires_grad = False)
         iter = 0
 
+        # print(torch.nonzero(m, as_tuple = True)[0].shape[0])
         while m.nonzero().shape[0] > 0 and iter < 100:
-
             a = alpha_temp[torch.where(m)].requires_grad_(True)
             fx = fhatx[torch.where(m)].requires_grad_(True)
             t = target[torch.where(m)].requires_grad_(True)
@@ -113,7 +121,7 @@ class rootfind_train(torch.autograd.Function):
 
                 alpha_temp[torch.where(m_bisec)] = a_bisec.requires_grad_(True)
 
-            m = (torch.abs(ctx.V(fhatx*alpha_temp) - target) > 0.0001).squeeze()
+            m = (torch.abs(ctx.V(fhatx*alpha_temp) - target) > tol).squeeze()
 
             iter += 1
 
@@ -146,23 +154,22 @@ class rootfind_train(torch.autograd.Function):
 
             A_f = torch.autograd.grad(x_root, fhatx, create_graph=False, retain_graph = True, grad_outputs=grad_input)[0]
             A_t = torch.autograd.grad(x_root, target, create_graph=False, retain_graph = True, grad_outputs=grad_input)[0]
-
-            # A_f = torch.autograd.grad(Fx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
-            # A_t = torch.autograd.grad(Fx, target, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            # # A_f = torch.autograd.grad(Fx, fhatx, create_graph=True, retain_graph = True, grad_outputs=grad_input)[0]
+            # # A_t = torch.autograd.grad(Fx, target, create_graph=True, retain_graph = True, grad_outputs=grad_input)[0]
             # b = torch.autograd.grad(Fx, alpha, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
-            # a = torch.autograd.grad(fhatx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(fhatx))[0]
-        # a = torch.ones_like(fhatx)
-
-        # dF_df = A_f/(1-b)
-        # dF_dt = A_t/(1-b)
+        #     #
+        #     A_alpha = torch.autograd.grad(x_root, alpha, create_graph=False, retain_graph = True, grad_outputs=grad_input)[0]
+        #     # A_t = torch.autograd.grad(x_root, target, create_graph=False, retain_graph = True, grad_outputs=grad_input)[0]
+        #     A_f = torch.autograd.grad(Fx, fhatx, create_graph=False, retain_graph = True, grad_outputs=A_alpha)[0]
+        #     A_t = torch.autograd.grad(Fx, target, create_graph=False, retain_graph = True, grad_outputs=A_alpha)[0]
 
         #Theoretically we get b = 0 (above) at a fixed point whenever alpha is not a critical point
         #since alpha is only a critical point at 0, we can say b = 0
         dF_df = A_f
         dF_dt = A_t
 
-        # grad_rootfind_f = grad_input*(alpha + fhatx*B)
-        # grad_rootfind_t = grad_input*fhatx*dF_dt
+        # grad_rootfind_f = A_f*fhatx
+        # grad_rootfind_t = A_t*fhatx
 
         #we only need to differentiate w.r.t fhatx, target
         return None, None, dF_df, dF_dt, None

@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-#Taken from Manek + Kolter, with some modifications
+#ICNN-based Lyapunov NN : Taken from Manek + Kolter, with some modifications
 #   https://github.com/locuslab/stable_dynamics
 
 class ReHU(nn.Module):
@@ -20,33 +20,8 @@ class ReHU(nn.Module):
 
         return torch.max(torch.clamp(torch.sign(x)*(self.a)*x**2,min=0,max=-self.b),x+self.b)
 
-# class ReHU(torch.autograd.Function):
-#     #Re-implementation of the above
-#     @staticmethod
-#     def forward(ctx, x):
-#         x.requires_grad_(True)
-#         d = 1
-#         ctx.d = d
-#         a = 1/(2*d)
-#         b = -d/2
-#         output = torch.max(torch.clamp(torch.sign(x)*(a)*x**2,min=0,max=-b),x+b)
-#         ctx.save_for_backward(x, output)
-#         return output
-#
-#     @staticmethod
-#     def backward(ctx, grad_output):
-#
-#         x, output = ctx.saved_tensors
-#         d = ctx.d
-#         grad_input = grad_output.clone()
-#         m = torch.clamp(x/d, min=0, max=1)
-#         grad_input *= m
-#
-#         return grad_input
-
-
 class MakePSD(nn.Module):
-    def __init__(self, f, n, eps=0.01, d=1.0):
+    def __init__(self, f, n, eps=0.01, d=0.1):
         super().__init__()
         self.f = f
         self.zero = torch.nn.Parameter(f(torch.zeros((1,1,n))), requires_grad=False)
@@ -95,3 +70,88 @@ class ICNN(nn.Module):
             z = self.act(z)
 
         return F.linear(x, self.W[-1], self.bias[-1]) + F.linear(z, F.softplus(self.U[-1])) / self.U[-1].shape[0]
+
+
+class ICNN_2(nn.Module):
+    def __init__(self, layer_sizes, activation=F.relu_):
+        super().__init__()
+
+        # self.W = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
+        #                            for l in layer_sizes[1:]])
+        self.U = nn.ParameterList([nn.Parameter(torch.Tensor(layer_sizes[i], layer_sizes[i-1]))
+                                   for i in range(1,len(layer_sizes))])
+
+        self.act = activation
+        self.reset_parameters()
+
+    def reset_parameters(self):
+
+        for U in self.U:
+            nn.init.kaiming_uniform_(U, a=5**0.5)
+
+
+    def forward(self, x):
+        z = F.linear(x, self.U[0])
+        z = self.act(z)
+
+
+        for U in self.U[1:-1]:
+            z = F.linear(z, F.softplus(U)) / U.shape[0]
+
+            z = self.act(z)
+
+        return F.linear(z, F.softplus(self.U[-1])) / self.U[-1].shape[0]
+
+
+#Lyapunov NN proposed by Richards et al
+#   Rewritten here from original TF version as reference:
+#   https://github.com/befelix/safe_learning/blob/master/examples/utilities.py
+
+#For simplicty, this version assumes all hidden dimensions are the same
+#(Original implementation ensures hidden dimensions are nondecreasing)
+class Lyapunov_NN(nn.Module):
+    def __init__(self, f, quadratic_under = True, epsilon = 0.1):
+        super().__init__()
+
+        self.f = f
+        self.quadratic_under = quadratic_under
+        self.eps = epsilon
+
+    def forward(self, x):
+
+        if self.quadratic_under:
+            return (torch.norm(self.f(x), dim = -1, keepdim = True)**2) + self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
+        else:
+            return F.linear(self.f(x), self.f(x))
+
+#Feedforward NN with positive definite weights
+class PD_weights(nn.Module):
+    def __init__(self, layer_sizes, activation=F.gelu, epsilon = 1e-6):
+        super().__init__()
+
+        self.G = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
+                                   for l in layer_sizes[1:]])
+        self.I = nn.Parameter(torch.eye(layer_sizes[1]), requires_grad = False)
+        self.I_end = nn.Parameter(torch.eye(layer_sizes[-1]), requires_grad = False)
+        self.act = activation
+        self.eps = epsilon
+        self.reset_parameters()
+
+    def reset_parameters(self):
+
+        for G in self.G:
+            nn.init.kaiming_uniform_(G, a=5**0.5)
+
+    def forward(self, x):
+
+        z = F.linear(x, self.G[0])
+        z = self.act(z)
+
+        for G in self.G[1:-1]:
+            W = F.linear(G, G) + self.eps*self.I
+            z = F.linear(z, W)
+            z = self.act(z)
+
+        W = F.linear(self.G[-1], self.G[-1]) + self.eps*self.I
+
+        return F.linear(z, W)

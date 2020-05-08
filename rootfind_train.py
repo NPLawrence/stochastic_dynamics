@@ -15,7 +15,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 # from rootfind_autograd import rootfind_module
 
-import simple_model
 import rootfind_model as model
 import lyapunov_NN as L
 
@@ -25,19 +24,24 @@ torch.set_grad_enabled(True)
 
 gen_data.data_linear()
 
-epochs = 15
-batch_size = 64
+epochs = 100
+batch_size = 256
 learning_rate = 0.001
 
 
 # fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
+
+
 fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
                     nn.Linear(50, 50), nn.Tanh(),
+                    nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(50, 2))
-layer_sizes = np.array([2, 50, 1])
-
+layer_sizes = np.array([2, 50, 50, 1])
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,2)
+
+# layer_sizes = np.array([2, 50, 50, 50])
+# V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
 # input = torch.randn(1,2, requires_grad=True)
 # output = V(torch.randn(1,2))
 # # print(torch.autograd.grad(V(input),input))
@@ -47,9 +51,9 @@ V = L.MakePSD(ICNN,2)
 #     print(name, weight.grad)
 f_net = model.rootfind_module(fhat,V)
 
-PATH_ICNN = './saved_models/rootfind_test_ICNN_test.pth'
-PATH_V = './saved_models/rootfind_test_V_test.pth'
-PATH_f = './saved_models/rootfind_test_f_test.pth'
+PATH_ICNN = './saved_models/rootfind_ICNN.pth'
+PATH_V = './saved_models/rootfind_V.pth'
+PATH_f = './saved_models/rootfind_f.pth'
 
 # f_net = fhat
 
@@ -68,7 +72,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/linear_experiment_test')
+writer = SummaryWriter('runs/linear_experiment_rootfind')
 
 criterion_usual = nn.MSELoss()
 criterion_rootfind = nn.MSELoss()
@@ -76,6 +80,8 @@ criterion = criterion_usual
 
 #The optimization is the key step
 # rootfind = rootfind_module.rootfind_train.apply
+# optimizer = optim.SGD(f_net.parameters(), lr=learning_rate)
+# optimizer = optim.RMSprop(f_net.parameters(), lr=learning_rate)
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
 
 # f_net.train()
@@ -93,6 +99,7 @@ for epoch in range(epochs):
             outputs_rootfind = f_net(inputs_rootfind)
             # print('0', outputs_rootfind.shape, labels_rootfind.shape)
             loss = criterion(outputs_rootfind, labels_rootfind)
+
         elif inputs_rootfind.shape[0] == 0:
             outputs_usual = fhat(inputs_usual)
             # print('1', outputs_usual.shape, labels_usual.shape)
@@ -104,20 +111,22 @@ for epoch in range(epochs):
             loss_usual = criterion(outputs_usual, labels_usual)
             loss = loss_rootfind + loss_usual
 
+        # print(i, epoch)
         # outputs = fhat(inputs)
         # loss = criterion(outputs, labels)
 
-        loss.backward()
+        loss.backward(retain_graph = True)
         optimizer.step()
         running_loss += loss.item()
+
+    # for name, weight in f_net.named_parameters():
+    #
+    #     print(name, weight)
 
     writer.add_scalar('Loss', running_loss, epoch)
     for name, weight in f_net.named_parameters():
         writer.add_histogram(name, weight, epoch)
 
-    # for name, weight in V.f.named_parameters():
-    #
-    #     print(name, weight.grad)
 
 
 
@@ -125,13 +134,14 @@ for epoch in range(epochs):
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
     print("Epoch: ", epoch, "Running loss: ", running_loss)
-
+# for name, weight in f_net.named_parameters():
+#     print(name, weight)
 
 print('Finished Training')
 
 inputs, outputs = next(iter(train_loader))
 inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, outputs)
-writer.add_graph(f_net, inputs_rootfind)
+# writer.add_graph(f_net, inputs_rootfind)
 writer.close()
 
 torch.save(ICNN.state_dict(), PATH_ICNN)
