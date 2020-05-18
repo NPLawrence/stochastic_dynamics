@@ -22,21 +22,21 @@ import generate_data as gen_data
 
 torch.set_grad_enabled(True)
 
-gen_data.data_linear()
+# gen_data.data_linear()
 
 epochs = 100
 batch_size = 256
-learning_rate = 0.001
+learning_rate = 0.005
 
 
 # fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
 
 
-fhat = nn.Sequential(nn.Linear(2, 50), nn.Tanh(),
-                    nn.Linear(50, 50), nn.Tanh(),
-                    nn.Linear(50, 50), nn.ReLU(),
-                    nn.Linear(50, 2))
+fhat = nn.Sequential(nn.Linear(2, 25), nn.ReLU(),
+                    nn.Linear(25, 25), nn.ReLU(),
+                    nn.Linear(25, 2))
 layer_sizes = np.array([2, 50, 50, 1])
+
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,2)
 
@@ -80,7 +80,7 @@ criterion = criterion_usual
 
 #The optimization is the key step
 # rootfind = rootfind_module.rootfind_train.apply
-# optimizer = optim.SGD(f_net.parameters(), lr=learning_rate)
+# optimizer = optim.SGD(f_net.parameters(), lr=learning_rate, momentum=0.9)
 # optimizer = optim.RMSprop(f_net.parameters(), lr=learning_rate)
 optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
 
@@ -98,18 +98,28 @@ for epoch in range(epochs):
         if inputs_usual.shape[0] == 0:
             outputs_rootfind = f_net(inputs_rootfind)
             # print('0', outputs_rootfind.shape, labels_rootfind.shape)
-            loss = criterion(outputs_rootfind, labels_rootfind)
+            V_loss = torch.sum(V(labels_rootfind) - V(inputs_rootfind))
+            loss_print = criterion(outputs_rootfind, labels_rootfind)
+            loss = loss_print + V_loss
+            # loss = loss_print
 
         elif inputs_rootfind.shape[0] == 0:
             outputs_usual = fhat(inputs_usual)
+            V_loss = torch.sum(V(labels_usual) - V(inputs_usual))
             # print('1', outputs_usual.shape, labels_usual.shape)
-            loss = criterion(outputs_usual, labels_usual)
+            loss_print = criterion(outputs_usual, labels_usual)
+            loss = loss_print + V_loss
+            # loss = loss_print
         else:
             outputs_rootfind = f_net(inputs_rootfind)
             loss_rootfind = criterion(outputs_rootfind, labels_rootfind)
             outputs_usual = fhat(inputs_usual)
             loss_usual = criterion(outputs_usual, labels_usual)
-            loss = loss_rootfind + loss_usual
+
+            V_loss = torch.sum(V(labels) - V(inputs))
+            loss_print = loss_rootfind + loss_usual
+            loss = loss_print + V_loss
+            # loss = loss_print
 
         # print(i, epoch)
         # outputs = fhat(inputs)
@@ -117,7 +127,7 @@ for epoch in range(epochs):
 
         loss.backward(retain_graph = True)
         optimizer.step()
-        running_loss += loss.item()
+        running_loss += loss_print.item()
 
     # for name, weight in f_net.named_parameters():
     #
