@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from mpl_toolkits.mplot3d import Axes3D
 
+print('hello world')
 rho = 28.0
 sigma = 10.0
 beta = 8.0 / 3.0
