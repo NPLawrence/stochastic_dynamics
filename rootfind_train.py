@@ -24,9 +24,9 @@ torch.set_grad_enabled(True)
 
 # gen_data.data_linear()
 
-epochs = 100
-batch_size = 256
-learning_rate = 0.005
+epochs = 200
+batch_size = 512
+learning_rate = 0.0025
 
 
 # fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
@@ -49,9 +49,9 @@ V = L.MakePSD(ICNN,2)
 
 # for name, weight in V.named_parameters():
 #     print(name, weight.grad)
-f_net = model.rootfind_module(fhat,V)
+f_net = model.rootfind_module(fhat,V,is_training = True)
 
-PATH_ICNN = './saved_models/rootfind_ICNN.pth'
+# PATH_ICNN = './saved_models/rootfind_ICNN.pth'
 PATH_V = './saved_models/rootfind_V.pth'
 PATH_f = './saved_models/rootfind_f.pth'
 
@@ -69,8 +69,8 @@ Valid_data = pd.concat([pd.DataFrame(Val_inp), pd.DataFrame(Val_target)], axis=1
 train_dataset = gen_data.oversampdata(Train_data)
 valid_dataset = gen_data.oversampdata(Valid_data)
 
-train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
 writer = SummaryWriter('runs/linear_experiment_rootfind')
 
@@ -93,32 +93,36 @@ for epoch in range(epochs):
     for i, data in enumerate(train_loader, 0):
 
         inputs, labels = data
-        inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, labels)
+        # inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, labels)
         optimizer.zero_grad()
-        if inputs_usual.shape[0] == 0:
-            outputs_rootfind = f_net(inputs_rootfind)
-            # print('0', outputs_rootfind.shape, labels_rootfind.shape)
-            V_loss = torch.sum(V(labels_rootfind) - V(inputs_rootfind))
-            loss_print = criterion(outputs_rootfind, labels_rootfind)
-            loss = loss_print + V_loss
-            # loss = loss_print
-
-        elif inputs_rootfind.shape[0] == 0:
-            outputs_usual = fhat(inputs_usual)
-            V_loss = torch.sum(V(labels_usual) - V(inputs_usual))
-            # print('1', outputs_usual.shape, labels_usual.shape)
-            loss_print = criterion(outputs_usual, labels_usual)
-            loss = loss_print + V_loss
-            # loss = loss_print
-        else:
-            outputs_rootfind = f_net(inputs_rootfind)
-            loss_rootfind = criterion(outputs_rootfind, labels_rootfind)
-            outputs_usual = fhat(inputs_usual)
-            loss_usual = criterion(outputs_usual, labels_usual)
-
-            V_loss = torch.sum(V(labels) - V(inputs))
-            loss_print = loss_rootfind + loss_usual
-            loss = loss_print + V_loss
+        outputs = f_net(inputs)
+        loss_print = criterion(outputs, labels)
+        V_loss = torch.mean(V(labels) - V(inputs))
+        loss = loss_print + V_loss
+        # if inputs_usual.shape[0] == 0:
+        #     outputs_rootfind = f_net(inputs_rootfind)
+        #     # print('0', outputs_rootfind.shape, labels_rootfind.shape)
+        #     V_loss = torch.mean(V(labels_rootfind) - V(inputs_rootfind))
+        #     loss_print = criterion(outputs_rootfind, labels_rootfind)
+        #     loss = loss_print + V_loss
+        #     # loss = loss_print
+        #
+        # elif inputs_rootfind.shape[0] == 0:
+        #     outputs_usual = fhat(inputs_usual)
+        #     V_loss = torch.mean(V(labels_usual) - V(inputs_usual))
+        #     # print('1', outputs_usual.shape, labels_usual.shape)
+        #     loss_print = criterion(outputs_usual, labels_usual)
+        #     loss = loss_print + V_loss
+        #     # loss = loss_print
+        # else:
+        #     outputs_rootfind = f_net(inputs_rootfind)
+        #     loss_rootfind = criterion(outputs_rootfind, labels_rootfind)
+        #     outputs_usual = fhat(inputs_usual)
+        #     loss_usual = criterion(outputs_usual, labels_usual)
+        #
+        #     V_loss = torch.mean(V(labels) - V(inputs))
+        #     loss_print = loss_rootfind + loss_usual
+        #     loss = loss_print + V_loss
             # loss = loss_print
 
         # print(i, epoch)
@@ -149,11 +153,11 @@ for epoch in range(epochs):
 
 print('Finished Training')
 
-inputs, outputs = next(iter(train_loader))
-inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, outputs)
+# inputs, outputs = next(iter(train_loader))
+# inputs_usual, labels_usual, inputs_rootfind, labels_rootfind = f_net.split_rootfind(inputs, outputs)
 # writer.add_graph(f_net, inputs_rootfind)
 writer.close()
 
-torch.save(ICNN.state_dict(), PATH_ICNN)
+# torch.save(ICNN.state_dict(), PATH_ICNN)
 torch.save(V.state_dict(), PATH_V)
 torch.save(fhat.state_dict(), PATH_f)

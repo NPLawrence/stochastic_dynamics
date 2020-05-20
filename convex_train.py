@@ -20,34 +20,36 @@ torch.set_grad_enabled(True)
 import convex_model as model
 import lyapunov_NN as L
 
-import generate_data as gen_data
+import generate_data
 
 # gen_data.data_linear()
+# lorenz = generate_data.data_Lorenz()
+# lorenz.gen_data(1)
 
-epochs = 300
-batch_size = 128
-learning_rate = 0.001
+epochs = 5000
+batch_size = 256
+learning_rate = 0.0025
+n = 3
+add_state = True
 
-fhat = nn.Sequential(nn.Linear(2, 25), nn.Tanh(),
-                    nn.Linear(25, 25), nn.ReLU(),
-                    nn.Linear(25, 25), nn.ReLU(),
-                    nn.Linear(25, 2))
-layer_sizes = np.array([2, 25, 25, 1])
-ICNN = L.ICNN_2(layer_sizes)
-V = L.MakePSD(ICNN,2)
+fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
+
+layer_sizes = np.array([n, 25, 25, 1])
+ICNN = L.ICNN(layer_sizes)
+V = L.MakePSD(ICNN,n)
 # layer_sizes = np.array([2, 50, 50, 50])
 # V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
 
-PATH_V = './saved_models/convex_VICNN2.pth'
-PATH_f = './saved_models/convex_fICNN2.pth'
+PATH_V = './saved_models/convex_V_Lorenz.pth'
+PATH_f = './saved_models/convex_f_Lorenz.pth'
+# PATH_f = './saved_models/simple_f_Lorenz.pth'
 # PATH_f = './saved_models/simple_fICNN2.pth'
 
-f_net = model.dynamics_convex(fhat,V)
+f_net = model.dynamics_convex(fhat,V,add_state)
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
-
-data = pd.read_csv("./datasets/data_linear.csv")
+data = pd.read_csv("./datasets/data_Lorenz.csv")
 
 data_input = data.values[:,:2]
 data_output = data.values[:,2:]
@@ -56,14 +58,14 @@ Trn_input,  Val_inp, Trn_target,Val_target = train_test_split(data_input, data_o
 Train_data = pd.concat([pd.DataFrame(Trn_input), pd.DataFrame(Trn_target)], axis=1)
 Valid_data = pd.concat([pd.DataFrame(Val_inp), pd.DataFrame(Val_target)], axis=1)
 # training and validation dataset
-train_dataset = gen_data.oversampdata(Train_data)
-valid_dataset = gen_data.oversampdata(Valid_data)
+train_dataset = generate_data.oversampdata(Train_data)
+valid_dataset = generate_data.oversampdata(Valid_data)
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_experimentICNN2')
-# writer = SummaryWriter('runs/simple_experimentICNN2')
+writer = SummaryWriter('runs/convex_experiment_Lorenz')
+# writer = SummaryWriter('runs/simple_experiment_Lorenz')
 
 
 criterion = nn.MSELoss()
@@ -79,7 +81,6 @@ for epoch in range(epochs):
     running_loss = 0.0
 
     for i, data in enumerate(train_loader, 0):
-
 
         inputs, labels = data
         optimizer.zero_grad()

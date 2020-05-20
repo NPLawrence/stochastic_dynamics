@@ -12,7 +12,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class plot_dynamics(nn.Module):
-    #Generates stochastically stable system via root-find
     def __init__(self, f, V):
         super().__init__()
 
@@ -54,8 +53,8 @@ class plot_dynamics(nn.Module):
 
         if show_ls:
 
-            x = np.arange(-2, 18.0, 0.05)
-            y = np.arange(-2, 18.0, 0.05)
+            x = np.arange(-3, 15.0, 0.1)
+            y = np.arange(-3, 15.0, 0.1)
             # x = np.arange(-3, 8, 0.1)
             # y = np.arange(-3, 8, 0.1)
             X, Y = np.meshgrid(x, y)
@@ -149,3 +148,44 @@ class plot_dynamics(nn.Module):
         ax.yaxis.set_ticks([])
         ax.zaxis.set_ticks([])
         plt.show()
+
+
+
+class plot_dynamics_3D(nn.Module):
+    def __init__(self, f, V):
+        super().__init__()
+
+        self.f = f
+        self.V = V
+
+    def get_trajectory(self, x0, steps, show_mu = False):
+
+        x = x0
+        X = torch.empty([steps,x.squeeze().size(0)])
+        X[0,:] = x.squeeze()
+
+        with torch.no_grad():
+            for i in range(steps-1):
+
+                    x = self.f(x)
+                    X[i+1,:] = x
+
+        return X.detach().numpy()
+
+
+    def plot_trajectory(self, x0, kwargs, sample_paths = 1, show_mu = False, steps = 200):
+
+        # rho = 28.0
+        # sigma = 10.0
+        # beta = 8.0 / 3.0
+        # fig = plt.figure()
+        # fig.gca(projection='3d')
+        for i in range(sample_paths):
+            X_val = self.get_trajectory(x0, steps, show_mu)
+            if i > 0:
+                kwargs["label"] = None
+
+            # plt.draw()
+            plt.plot(X_val[:, 0], X_val[:, 1], X_val[:, 2], **kwargs)
+
+        return X_val

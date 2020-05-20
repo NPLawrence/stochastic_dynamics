@@ -25,9 +25,9 @@ import generate_data as gen_data
 # gen_data.data_linear()
 # gen_data.data_linear_noise()
 
-epochs = 100
-batch_size = 256
-learning_rate = 0.001
+epochs = 150
+batch_size = 512
+learning_rate = 0.0025
 
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
@@ -36,27 +36,28 @@ fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
                     # nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(50, 2*2*k))
-layer_sizes = np.array([2, 100, 100, 1])
-ICNN = L.ICNN_2(layer_sizes)
+layer_sizes = np.array([2, 50, 50, 1])
+ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,2)
 # f_net = model.dynamics_simple(fhat,V)
 # PATH_ICNN = './saved_models/simple_ICNN_stochastic.pth'
-# PATH_V = './saved_models/simple_V_stochastic_noisyData_ICNN2.pth'
-# PATH_f = './saved_models/simple_f_stochastic_noisyData_ICNN2.pth'
-PATH_V = './saved_models/simple_V_stochastic_ICNN2.pth'
-PATH_f = './saved_models/simple_f_stochastic_ICNN2.pth'
+# PATH_V = './saved_models/simple_V_stochastic_noisyData.pth'
+# PATH_f = './saved_models/simple_f_stochastic_noisyData.pth'
+# PATH_V = './saved_models/simple_V_stochastic.pth'
+# PATH_f = './saved_models/simple_f_stochastic.pth'
+PATH_V = './saved_models/rootfind_V_stochastic.pth'
+PATH_f = './saved_models/rootfind_f_stochastic.pth'
 # torch.save(f_net.state_dict(), PATH)
 
 # f_net = model.dynamics_simple(fhat,V)
 # f_net = model.dynamics_nonincrease(fhat,V)
-# f_net = stochastic_model.stochastic_module(fhat, V)
-f_net = stochastic_model.MDN_module(fhat, V, k)
+f_net = stochastic_model.stochastic_module(fhat, V, k)
+# f_net = stochastic_model.MDN_module(fhat, V, k)
 
 # f_net = fhat
 
-
-data = pd.read_csv("./datasets/data_linear.csv")
-# data = pd.read_csv("./datasets/data_linear_noisy.csv")
+# data = pd.read_csv("./datasets/data_linear.csv")
+data = pd.read_csv("./datasets/data_linear_noisy.csv")
 
 data_input = data.values[:,:2]
 data_output = data.values[:,2:]
@@ -71,7 +72,11 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/stochastic_experiment_ICNN2')
+writer = SummaryWriter('runs/stochastic_experiment_rootfind')
+# writer = SummaryWriter('runs/stochastic_experiment_linear')
+# writer = SummaryWriter('runs/stochastic_experiment_linear_noisyData')
+
+
 # get some random training images
 # dataiter = iter(train_loader)
 # input, output = dataiter.next()

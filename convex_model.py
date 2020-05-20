@@ -16,36 +16,43 @@ import torch.optim as optim
 
 class fhat(nn.Module):
     #This is our 'nominal' model (before modifying/correcting the dynamics)
-    def __init__(self, layer_sizes):
+    def __init__(self, layer_sizes, add_state = False):
         super().__init__()
-        self.W = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
-                                   for l in layer_sizes[1:]])
-        self.bias = nn.ParameterList([nn.Parameter(torch.Tensor(l)) for l in layer_sizes[1:]])
-        self.reset_parameters()
-        # logger.info(f"Initialized ICNN with {self.act} activation")
 
-    def reset_parameters(self):
-        # copying from PyTorch Linear
-        for W in self.W:
-            nn.init.kaiming_uniform_(W, a=5**0.5)
+        self.add_state = add_state
+        layers = []
+        for i in range(len(layer_sizes)-2):
+            layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))
+            layers.append(nn.ReLU())
+        layers.append(nn.Linear(layer_sizes[-2], layer_sizes[-1]))
+        self.fhat = nn.Sequential(*layers)
+        # self.fhat = nn.Sequential(nn.Linear(n, 25), nn.ReLU(),
+        #                     nn.Linear(25, 25), nn.ReLU(),
+        #                     nn.Linear(25, 25), nn.ReLU(),
+        #                     nn.Linear(25, n))
 
-        for i,b in enumerate(self.bias):
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.W[i])
-            bound = 1 / (fan_in**0.5)
-            nn.init.uniform_(b, -bound, bound)
+    # def reset_parameters(self):
+    #     # copying from PyTorch Linear
+    #     for W in self.W:
+    #         nn.init.kaiming_uniform_(W, a=5**0.5)
+    #
+    #     for i,b in enumerate(self.bias):
+    #         fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.W[i])
+    #         bound = 1 / (fan_in**0.5)
+    #         nn.init.uniform_(b, -bound, bound)
 
     def forward(self, x):
 
-        for W,b in zip(self.W, self.bias):
-            z = F.linear(x, W, b)
-            z = torch.tanh(z)
-            # z = F.relu(z)
+        if self.add_state:
+            z = x + self.fhat(x)
+        else:
+            z = self.fhat(x)
 
         return z
 
 class dynamics_convex(nn.Module):
     #Modifies fhat via a simple scaling rule, exploiting convexity
-    def __init__(self, fhat, V):
+    def __init__(self, fhat, V, add_state = False):
         super().__init__()
 
         # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
@@ -55,12 +62,15 @@ class dynamics_convex(nn.Module):
 
         self.fhat = fhat
         self.V = V
+        self.add_state = add_state
 
     def forward(self, x):
-
+        beta = 1.0
         # with torch.no_grad():
-        beta = 0.99
-        fx = self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+        if self.add_state:
+            fx = x + self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+        else:
+            fx = self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
             # fx = self.fhat(x)
 
         return fx

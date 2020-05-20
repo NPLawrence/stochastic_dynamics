@@ -15,7 +15,7 @@ class data_linear():
         A = A.transpose()
         data = []
 
-        X = np.linspace(-5,5,num=15)
+        X = np.linspace(-5,5,num=10)
         # X = np.array([-3, 3])
 
         for x1 in X:
@@ -48,7 +48,7 @@ class data_linear_noise():
         A = A.transpose()
         data = []
 
-        X = np.linspace(-5,5,num=15)
+        X = np.linspace(-5,5,num=10)
         # X = np.linspace(-5,5,num=3)
 
         for x1 in X:
@@ -70,6 +70,33 @@ class data_linear_noise():
 
         np.savetxt("./datasets/data_linear_noisy.csv", data, delimiter=",")
 
+class data_Lorenz():
+    def __init__(self):
+
+        self.rho = 28.0
+        self.sigma = 10.0
+        self.beta = 8.0 / 3.0
+
+        self.h = 0.01
+
+    def f(self, state):
+        x, y, z = np.squeeze(state)
+        return np.array([[self.sigma*(y - x), x*(self.rho - z) - y, x*y - self.beta*z]])
+
+    def gen_data(self, trajectories=1):
+        data = []
+        x = np.array([[1+1,2,1]])
+        for i in range(2000):
+
+            k1 = self.f(x)
+            k2 = self.f(x + self.h*(k1/2))
+            k3 = self.f(x + self.h*(k2/2))
+            k4 = self.f(x + self.h*k3)
+            x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+            data.append(np.array((x,x_new)).reshape((1,6)).squeeze())
+            x = x_new
+
+        np.savetxt("./datasets/data_Lorenz.csv", data, delimiter=",")
 
 
 #see https://github.com/bhuvanakundumani/pytorch_Dataloader

@@ -35,36 +35,48 @@ class rootfind_module(nn.Module):
     #This is where we bring together:
     #   1. The Newton iteration function (newton_iter)
     #   2. The custom autograd function for backprop though Newton's method (rootfind_train)
-    def __init__(self, fhat, V, beta = 0.99):
+    def __init__(self, fhat, V, is_training = False, beta = 0.99):
         super().__init__()
 
         self.V = V
         self.fhat = fhat
         self.beta = beta
+        self.is_training = is_training
 
         self.F = newton_iter(self.fhat, self.V)
 
     def forward(self, x):
 
-        fhatx = self.fhat(x)
-        target = self.beta*self.V(x)
+        if self.is_training:
+            y = torch.empty_like(x)
+            x_usual, x_rootfind, m = self.split_rootfind(x)
+            rootfind = rootfind_train.apply
+            fhatx = self.fhat(x_rootfind)
+            target = self.beta*self.V(x_rootfind)
+            x_root = rootfind(self.V, self.F, fhatx, target, x_rootfind)
+            y[torch.where(m)] = self.fhat(x_usual)
+            y[torch.where(~m)] = x_root
+            return y
+        else:
+            fhatx = self.fhat(x)
+            target = self.beta*self.V(x)
+            rootfind = rootfind_train.apply
+            x_root = rootfind(self.V, self.F, fhatx, target, x)
+            return x_root
 
-        rootfind = rootfind_train.apply
-        x_root = rootfind(self.V, self.F, fhatx, target, x)
-
-        return x_root
-
-    def split_rootfind(self, inputs, labels):
+    def split_rootfind(self, inputs):
 
         fhatx = self.fhat(inputs)
         target = self.beta*self.V(inputs)
         m = (self.V(fhatx) <= target).squeeze()
         x_usual = inputs[torch.where(m)]
-        labels_usual = labels[torch.where(m)]
+        # labels_usual = labels[torch.where(m)]
         x_rootfind = inputs[torch.where(~m)]
-        labels_rootfind = labels[torch.where(~m)]
+        # labels_rootfind = labels[torch.where(~m)]
 
-        return x_usual, labels_usual, x_rootfind, labels_rootfind
+        # return x_usual, labels_usual, x_rootfind, labels_rootfind
+        return x_usual, x_rootfind, m
+
 
 class rootfind_train(torch.autograd.Function):
 
@@ -77,7 +89,7 @@ class rootfind_train(torch.autograd.Function):
         ctx.F = F
 
         # tol = torch.clamp(target*((1-0.99)/0.99), max = 0.001)
-        tol = 0.0001
+        tol = 0.001
 
         alpha_temp = torch.ones(size = (x.shape[0], 1, 1), requires_grad = True)
 
@@ -136,6 +148,33 @@ class rootfind_train(torch.autograd.Function):
         return x_root
 
 
+    # @staticmethod
+    # def backward(ctx, grad_output):
+    #
+    #     grad_input = grad_output.clone()
+    #
+    #     fhatx, target, x_root = ctx.saved_tensors
+    #
+    #     alpha = ctx.alpha
+    #     V = ctx.V
+    #     F = ctx.F
+    #
+    #
+    #     with torch.enable_grad():
+    #
+    #         Fx, dF_da, dF_df = F(fhatx, target, alpha, True)
+    #         # A_f = torch.bmm(torch.transpose(fhatx,1,2), (-1/dF_da)*dF_df)
+    #         A_f = torch.bmm(torch.transpose(fhatx,1,2), dF_df/dF_da)
+    #         # A_t = torch.bmm(torch.transpose(fhatx,1,2), 1/dF_da)
+    #         A_t = torch.transpose(fhatx,1,2)/dF_da
+    #
+    #     dF_df = alpha*grad_input - torch.bmm(grad_input, A_f)
+    #     dF_dt = torch.bmm(grad_input, A_t)
+    #
+    #
+    #     #we only need to differentiate w.r.t fhatx, target
+    #     return None, None, dF_df, dF_dt, None
+
     @staticmethod
     def backward(ctx, grad_output):
 
@@ -150,13 +189,19 @@ class rootfind_train(torch.autograd.Function):
 
         with torch.enable_grad():
 
-            Fx, dF_da, dF_df = F(fhatx, target, alpha, True)
-            A_f = torch.bmm(torch.transpose(fhatx,1,2), (-1/dF_da)*dF_df)
-            A_t = torch.bmm(torch.transpose(fhatx,1,2), 1/dF_da)
+            Fx = F(fhatx, target, alpha, False)
+            A_f = torch.autograd.grad(Fx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            A_t = torch.autograd.grad(Fx, target, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            # b = torch.autograd.grad(Fx, alpha, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
+            # a = torch.autograd.grad(fhatx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(fhatx))[0]
 
+            # p_alpha*fhatx / p_fhatx
 
-        dF_df = torch.bmm(grad_input, A_f) + alpha*grad_input
-        dF_dt = torch.bmm(grad_input, A_t)
+        dF_df = A_f
+        dF_dt = A_t
 
-        #we only need to differentiate w.r.t fhatx, target
-        return None, None, dF_df, dF_dt, None
+        # loss wrt alpha*fhatx
+        grad_rootfind_f = alpha*grad_input + torch.bmm(grad_input, torch.bmm(torch.transpose(fhatx,1,2),dF_df))
+        grad_rootfind_t = torch.bmm(grad_input, torch.transpose(fhatx,1,2))*dF_dt
+
+        return None, None, grad_rootfind_f, grad_rootfind_t, None
