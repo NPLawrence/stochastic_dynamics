@@ -3,10 +3,11 @@ import matplotlib.pyplot as plt
 from scipy.integrate import odeint
 from mpl_toolkits.mplot3d import Axes3D
 
-print('hello world')
-rho = 28.0
+# rho = 28.0
+rho = 14
 sigma = 10.0
 beta = 8.0 / 3.0
+
 
 h = 0.01
 
@@ -14,7 +15,7 @@ def f(state):
     x, y, z = state  # Unpack the state vector
     return np.array([sigma * (y - x), x * (rho - z) - y, x * y - beta * z])  # Derivatives
 
-x = np.array([1.0, 1.0, 1.0])
+x = np.array([2.0, 2.0, 1.0])
 t = np.arange(0.0, 20.0, 0.01)
 
 # states = odeint(f, state0, t)

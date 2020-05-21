@@ -22,9 +22,9 @@ import generate_data as gen_data
 
 torch.set_grad_enabled(True)
 
-# gen_data.data_linear()
+gen_data.data_linear()
 
-epochs = 200
+epochs = 300
 batch_size = 512
 learning_rate = 0.0025
 
@@ -74,9 +74,8 @@ test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
 writer = SummaryWriter('runs/linear_experiment_rootfind')
 
-criterion_usual = nn.MSELoss()
-criterion_rootfind = nn.MSELoss()
-criterion = criterion_usual
+criterion = nn.MSELoss()
+
 
 #The optimization is the key step
 # rootfind = rootfind_module.rootfind_train.apply
@@ -97,8 +96,9 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         outputs = f_net(inputs)
         loss_print = criterion(outputs, labels)
-        V_loss = torch.mean(V(labels) - V(inputs))
-        loss = loss_print + V_loss
+        # V_loss = torch.mean(V(labels) - V(inputs))
+        V_loss = torch.mean(V(labels))
+        loss = loss_print + 0.01*V_loss
         # if inputs_usual.shape[0] == 0:
         #     outputs_rootfind = f_net(inputs_rootfind)
         #     # print('0', outputs_rootfind.shape, labels_rootfind.shape)

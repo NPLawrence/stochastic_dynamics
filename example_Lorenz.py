@@ -20,6 +20,7 @@ import lyapunov_NN as L
 import dynamics_plotting as vis
 import generate_data
 
+
 n = 3
 add_state = True
 
@@ -39,8 +40,8 @@ V = L.MakePSD(ICNN,n)
 # PATH_f_noise = './saved_models/simple_f_stochastic_noisyData_ICNN2.pth'
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN_noisyData_ICNN2.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN_noisyData_ICNN2.pth'
-PATH_V = './saved_models/convex_V_Lorenz.pth'
-PATH_f = './saved_models/convex_f_Lorenz.pth'
+PATH_V = './saved_models/convex_V_Lorenz_stable.pth'
+PATH_f = './saved_models/convex_f_Lorenz_stable.pth'
 PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN.pth'
@@ -110,12 +111,12 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 # ax1 = fig.add_subplot(aspect=3)
 # ax1 = plt.subplot(111)
 
-kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
-X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, show_mu = True, steps = 2000)
+# kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
+# X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, show_mu = True, steps = 2000)
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
-X = plotting.plot_trajectory(x0, kwargs, sample_paths = 8, steps = 2000)
+X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
-X_true = np.loadtxt("./datasets/data_Lorenz.csv", delimiter=",")
+X_true = np.loadtxt("./datasets/data_Lorenz_stable.csv", delimiter=",")
 plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
 
 # ax1.set_ylim([-1, 6])
@@ -157,17 +158,17 @@ kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stab
 kwargs_true = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
 
 plt.subplot(131)
-plt.plot(X_nominal[:,0],**kwargs_nominal)
+# plt.plot(X_nominal[:,0],**kwargs_nominal)
 plt.plot(X[:,0],**kwargs)
 plt.plot(X_true[:, 0],**kwargs_true)
 
 plt.subplot(132)
-plt.plot(X_nominal[:,1],**kwargs_nominal)
+# plt.plot(X_nominal[:,1],**kwargs_nominal)
 plt.plot(X[:,1],**kwargs)
 plt.plot(X_true[:, 1],**kwargs_true)
 
 plt.subplot(133)
-plt.plot(X_nominal[:,2],**kwargs_nominal)
+# plt.plot(X_nominal[:,2],**kwargs_nominal)
 plt.plot(X[:,2],**kwargs)
 plt.plot(X_true[:, 2],**kwargs_true)
 

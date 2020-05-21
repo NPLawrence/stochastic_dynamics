@@ -89,7 +89,7 @@ class rootfind_train(torch.autograd.Function):
         ctx.F = F
 
         # tol = torch.clamp(target*((1-0.99)/0.99), max = 0.001)
-        tol = 0.001
+        tol = 0.0001
 
         alpha_temp = torch.ones(size = (x.shape[0], 1, 1), requires_grad = True)
 

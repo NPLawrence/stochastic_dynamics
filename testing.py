@@ -20,11 +20,9 @@ import lyapunov_NN as L
 import dynamics_plotting as vis
 import generate_data
 
-n = 3
 add_state = True
 
 fhat = nn.Sequential(nn.Linear(2, 25), nn.ReLU(),
-                    # nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(25, 25), nn.ReLU(),
                     nn.Linear(25, 2))
 layer_sizes = np.array([2, 50, 50, 1])
@@ -34,12 +32,13 @@ V = L.MakePSD(ICNN,2)
 
 
 
-PATH_ICNN = './saved_models/rootfind_ICNN.pth'
+
+# PATH_ICNN = './saved_models/rootfind_ICNN.pth'
 PATH_V = './saved_models/rootfind_V.pth'
 PATH_f = './saved_models/rootfind_f.pth'
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN.pth'
-ICNN.load_state_dict(torch.load(PATH_ICNN))
+# ICNN.load_state_dict(torch.load(PATH_ICNN))
 V.load_state_dict(torch.load(PATH_V))
 fhat.load_state_dict(torch.load(PATH_f))
 f = rootfind_model.rootfind_module(fhat,V,is_training = False)
@@ -59,7 +58,7 @@ x0 = torch.tensor([[[-0.75, 3.15]]], dtype = torch.float)
 
 
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 5, "alpha": 1, "label": "Prediction"}
-X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = plt)
+X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = True, steps = 100, ax = plt)
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 5, "label": "True dynamics"}
 X_true = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = plt)
 plt.legend()

@@ -23,13 +23,16 @@ import lyapunov_NN as L
 import generate_data
 
 # gen_data.data_linear()
-# lorenz = generate_data.data_Lorenz()
+generate_data.data_Lorenz()
+print('hello')
+# generate_data.data_VanderPol()
+
 # lorenz.gen_data(1)
 
-epochs = 5000
+epochs = 1000
 batch_size = 256
-learning_rate = 0.0025
-n = 3
+learning_rate = 0.001
+n = 2
 add_state = True
 
 fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
@@ -40,8 +43,10 @@ V = L.MakePSD(ICNN,n)
 # layer_sizes = np.array([2, 50, 50, 50])
 # V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
 
-PATH_V = './saved_models/convex_V_Lorenz.pth'
-PATH_f = './saved_models/convex_f_Lorenz.pth'
+PATH_V = './saved_models/convex_V_VanderPol_stable.pth'
+PATH_f = './saved_models/convex_f_VanderPol_stable.pth'
+# PATH_V = './saved_models/convex_V_Lorenz_stable.pth'
+# PATH_f = './saved_models/convex_f_Lorenz_stable.pth'
 # PATH_f = './saved_models/simple_f_Lorenz.pth'
 # PATH_f = './saved_models/simple_fICNN2.pth'
 
@@ -49,7 +54,7 @@ f_net = model.dynamics_convex(fhat,V,add_state)
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
-data = pd.read_csv("./datasets/data_Lorenz.csv")
+data = pd.read_csv("./datasets/data_VanderPol_stable.csv")
 
 data_input = data.values[:,:2]
 data_output = data.values[:,2:]
@@ -64,7 +69,8 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_experiment_Lorenz')
+writer = SummaryWriter('runs/convex_experiment_VanderPol_stable')
+# writer = SummaryWriter('runs/convex_experiment_Lorenz_stable')
 # writer = SummaryWriter('runs/simple_experiment_Lorenz')
 
 
@@ -95,8 +101,8 @@ for epoch in range(epochs):
         writer.add_histogram(name, weight, epoch)
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
-
-    print("Epoch: ", epoch, "Running loss: ", running_loss)
+    if epoch % 10 == 0:
+        print("Epoch: ", epoch, "Running loss: ", running_loss)
 input, labels = next(iter(train_loader))
 writer.add_graph(f_net, input)
 print('Finished Training')
