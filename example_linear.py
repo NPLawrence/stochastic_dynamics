@@ -19,6 +19,7 @@ import lyapunov_NN as L
 import dynamics_plotting as vis
 
 k = 1
+n = 2
 fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
                     # nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(50, 50), nn.ReLU(),
@@ -58,16 +59,13 @@ fhat_noise.load_state_dict(torch.load(PATH_f_noise))
 V_rf_noise.load_state_dict(torch.load(PATH_V_rf_noise))
 fhat_rf_noise.load_state_dict(torch.load(PATH_f_rf_noise))
 
-f = stochastic_model.MDN_module(fhat, V, k, is_training = False, show_mu = False)
-f_mu = stochastic_model.MDN_module(fhat, V, k, is_training = False, show_mu = True)
-f_noise = stochastic_model.MDN_module(fhat_noise, V_noise, k, is_training = False, show_mu = False)
-f_noise_mu = stochastic_model.MDN_module(fhat_noise, V_noise, k, is_training = False, show_mu = True)
+f = stochastic_model.MDN_module(fhat, V, n=n, k=k, is_training = False, show_mu = False)
+f_mu = stochastic_model.MDN_module(fhat, V, n=n, k=k, is_training = False, show_mu = True)
+f_noise = stochastic_model.MDN_module(fhat_noise, V_noise, n=n, k=k, is_training = False, show_mu = False)
+f_noise_mu = stochastic_model.MDN_module(fhat_noise, V_noise, n=n, k=k, is_training = False, show_mu = True)
 
-f_rf_noise = stochastic_model.stochastic_module(fhat_rf_noise, V_rf_noise, k, is_training = False, show_mu = False)
-f_rf_noise_mu = stochastic_model.stochastic_module(fhat_rf_noise, V_rf_noise, k, is_training = False, show_mu = True)
-
-
-
+f_rf_noise = stochastic_model.stochastic_module(fhat_rf_noise, V_rf_noise, n=n, k=k, is_training = False, show_mu = False)
+f_rf_noise_mu = stochastic_model.stochastic_module(fhat_rf_noise, V_rf_noise, n=n, k=k, is_training = False, show_mu = True)
 
 
 x0 = torch.tensor([[[-0.5, 1.15]]], dtype = torch.float)

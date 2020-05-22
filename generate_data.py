@@ -27,7 +27,6 @@ class data_linear():
                 # while np.dot(x,x.transpose()) < 0.5:
                 #     x = np.random.uniform(-3,3,size = (1,2))
 
-
                 # for i in range(10):
                 while np.dot(x,x.transpose()) > 0.1:
 
@@ -73,8 +72,8 @@ class data_linear_noise():
 class data_Lorenz():
     def __init__(self):
 
-        # self.rho = 28.0
-        self.rho = 14.0
+        self.rho = 28.0
+        # self.rho = 14.0
         self.sigma = 10.0
         self.beta = 8.0 / 3.0
 
@@ -86,7 +85,7 @@ class data_Lorenz():
 
     def gen_data(self, trajectories=1):
         data = []
-        x = np.array([[1,1,1]])
+        x = np.array([[2,1,1]])
         for i in range(2000):
 
             k1 = self.f(x)
@@ -102,19 +101,17 @@ class data_Lorenz():
 class data_VanderPol():
     def __init__(self):
 
-        self.mu = 1
-
-        self.h = 0.01
+        self.mu = 1.0
+        self.h = 0.1
 
     def f(self, state):
         x, y = np.squeeze(state)
-        return np.array([[self.mu*(x - (1/3)*x^3 - y), (1/self.mu)*x]])
+        return np.array([[self.mu*(x - (1/3)*x**3 - y), (1/self.mu)*x]])
 
     def gen_data(self, trajectories=1):
         data = []
-        x = np.array([[1,1]])
-        for i in range(100):
-            print('hello')
+        x = np.array([[4,2]])
+        for i in range(400):
 
             k1 = self.f(x)
             k2 = self.f(x + self.h*(k1/2))
@@ -125,6 +122,47 @@ class data_VanderPol():
             x = x_new
 
         np.savetxt("./datasets/data_VanderPol_stable.csv", data, delimiter=",")
+
+class data_multiMod():
+    def __init__(self):
+
+        self.alpha = 0.5
+        self.beta = 25.0
+        self.gamma = 8.0
+
+        self.h = 0.1
+
+    def f(self, x, i):
+        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,1)
+    def f_mean(self, x, i):
+        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1))
+
+    def gen_data(self, trajectories = 1, train_data = True, x = None):
+        data = []
+        if train_data:
+            for j in range(10):
+                x = np.random.normal(0,0.1)
+                for i in range(100):
+                    x_new = self.f(x,i)
+                    data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
+                    x = x_new
+
+            np.savetxt("./datasets/data_multiMod.csv", data, delimiter=",")
+
+        else:
+            data.append(np.array((x)).reshape((1,1)).squeeze())
+            x_mean = x
+            data_mean = []
+            data_mean.append(np.array((x_mean)).reshape((1,1)).squeeze())
+            for i in range(100):
+                x_new = self.f(x,i)
+                x_mean_new = self.f(x_mean,i)
+                data.append(np.array((x_new)).reshape((1,1)).squeeze())
+                data_mean.append(np.array((x_mean_new)).reshape((1,1)).squeeze())
+                x = x_new
+                x = x_mean_new
+            return data, data_mean
+
 
 
 #see https://github.com/bhuvanakundumani/pytorch_Dataloader

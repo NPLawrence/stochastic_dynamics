@@ -1,3 +1,9 @@
+
+
+import torch
+import torch.nn as nn
+from torch.distributions import Normal, OneHotCategorical
+
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy
@@ -75,7 +81,6 @@ class stochastic_module(nn.Module):
 
         self.mu_dynamics = MDN_dynamics(self.fhat, self.n, self.k, True)
         self.mu_rootfind = rootfind_model.rootfind_module(self.mu_dynamics, self.V, is_training, beta)
-
         self.var_dynamics = MDN_dynamics(self.fhat, self.n, self.k,False)
 
     def forward(self, x, y = None):
@@ -87,7 +92,6 @@ class stochastic_module(nn.Module):
 
         var = self.var_dynamics(x)
         # var = self.var_dynamics(x)
-
 
         model_dist = MultivariateNormal(mu_stable, torch.diag_embed(var))
         fx = (model_dist.rsample())
@@ -120,3 +124,98 @@ class MDN_dynamics(nn.Module):
             output = torch.exp(torch.stack(var.split(var.shape[1] // self.k, 1))).view(-1,1,self.n)
 
         return output
+
+#see the following for original source:
+#   https://github.com/tonyduan/mdn/blob/master/mdn/models.py
+#   (modified for own use)
+class MixtureDensityNetwork(nn.Module):
+    """
+    Mixture density network.
+    [ Bishop, 1994 ]
+    Parameters
+    ----------
+    dim_in: int; dimensionality of the covariates
+    dim_out: int; dimensionality of the response variable
+    n_components: int; number of components in the mixture model
+    mode: int; None for standard MDN, 1 for convex-based stability, 2 for root-finding
+    """
+
+    def __init__(self, dim_in, dim_out, n_components, V = None, mode = None, is_training = True, show_mu = False):
+        super().__init__()
+        self.pi_network = CategoricalNetwork(dim_in, n_components)
+        self.normal_network = MixtureDiagNormalNetwork(dim_in, dim_out,
+                                                       n_components, V = V, mode = mode)
+
+    def forward(self, x):
+        return self.pi_network(x), self.normal_network(x)
+
+    def loss(self, x, y):
+        pi, normal = self.forward(x)
+        loglik = normal.log_prob(y.expand_as(normal.loc))
+        loglik = torch.sum(loglik, dim=2)
+        loss = -torch.logsumexp(torch.log(pi.probs) + loglik, dim=1)
+        loss = loss.mean()
+        return loss
+
+    def sample(self, x):
+        pi, normal = self.forward(x)
+        samples = torch.sum(pi.sample().unsqueeze(2) * normal.sample(), dim=1)
+        return samples
+
+
+class MixtureDiagNormalNetwork(nn.Module):
+
+    def __init__(self, in_dim, out_dim, n_components, hidden_dim=None, V = None, mode = None):
+        super().__init__()
+        self.out_dim = out_dim
+        self.n_components = n_components
+        self.V = V
+        self.mode = mode
+        if hidden_dim is None:
+            hidden_dim = in_dim
+        self.network = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.ELU(),
+            nn.Linear(hidden_dim, 2 * out_dim * n_components),
+        )
+
+        if mode == 1:
+            self.mu = MDN_dynamics(self.network, self.in_dim, self.n_components, True)
+            self.mu_dynamics = convex_model.dynamics_convex(self.mu, self.V)
+            self.var_dynamics = MDN_dynamics(self.network, self.in_dim, self.n_components, False)
+
+        elif mode == 2:
+            self.mu = MDN_dynamics(self.network, self.in_dim, self.n_components, True)
+            self.mu_dynamics = rootfind_model.rootfind_module(self.mu, self.V, is_training, beta)
+            self.var_dynamics = MDN_dynamics(self.network, self.in_dim, self.n_components, False)
+
+
+    def forward(self, x):
+
+        if self.mode is None:
+            params = self.network(x)
+            mean, sd = torch.split(params, params.shape[-1] // 2, dim=-1)
+            mean = torch.stack(mean.split(mean.shape[-1] // self.n_components, 1)).view(-1,self.n_components,self.out_dim)
+            sd = torch.stack(sd.split(sd.shape[-1] // self.n_components, 1)).view(-1,self.n_components,self.out_dim)
+            return Normal(mean, torch.exp(sd))
+        else:
+            mean = self.mu_dynamics(x)
+            var = self.var_dynamics(x)
+            return Normal(mean.transpose(0, 1), var.transpose(0, 1))
+
+
+class CategoricalNetwork(nn.Module):
+
+    def __init__(self, in_dim, out_dim, hidden_dim=None):
+        super().__init__()
+        if hidden_dim is None:
+            hidden_dim = in_dim
+        self.network = nn.Sequential(
+            nn.Linear(in_dim, hidden_dim),
+            nn.ELU(),
+            nn.Linear(hidden_dim, out_dim)
+        )
+
+    def forward(self, x):
+        params = self.network(x)
+        return OneHotCategorical(logits=params.squeeze())

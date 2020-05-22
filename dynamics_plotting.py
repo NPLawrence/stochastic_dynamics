@@ -22,12 +22,14 @@ class plot_dynamics(nn.Module):
 
         if show_mu:
             mu = x0
-            y = self.f(mu)
-            X = torch.empty([steps,2,mu.squeeze().size(0)])
-            X[0,:] = torch.stack([mu.squeeze(), torch.zeros_like(mu.squeeze())])
+            # y = self.f(mu)
+            # X = torch.empty([steps,2,mu.squeeze().size(0)])
+            X = torch.empty([steps,mu.shape[-1]])
+            X[0,:] = mu.squeeze()
+            # X[0,:] = torch.stack([mu.squeeze(), torch.zeros_like(mu.squeeze())])
         else:
             x = x0
-            X = torch.empty([steps,x.squeeze().size(0)])
+            X = torch.empty([steps, x.shape[-1]])
             X[0,:] = x.squeeze()
 
         for i in range(steps-1):
@@ -36,9 +38,10 @@ class plot_dynamics(nn.Module):
 
                 if show_mu:
                     y = self.f(mu)
-                    mu = y[0].unsqueeze(dim = 0)
-                    var = y[1]
-                    X[i+1,:] = y
+                    # mu = y[0].unsqueeze(dim = 0)
+                    mu = y[0].view(-1,1,mu.shape[-1])
+                    # var = y[1]
+                    X[i+1,:] = mu
 
                 else:
                     x = self.f(x)
@@ -52,6 +55,7 @@ class plot_dynamics(nn.Module):
         X_val = self.get_trajectory(x0, steps, show_mu)
 
         if show_ls:
+
 
             x = np.arange(-5, 5.0, 0.1)
             y = np.arange(-5, 5.0, 0.1)
@@ -81,25 +85,36 @@ class plot_dynamics(nn.Module):
 
         if show_mu:
 
-            ax.plot(X_val[:,0,0], X_val[:,0,1],**kwargs)
-            ax.plot(X_val[-1,0,0], X_val[-1,1,0], color = "tab:blue", marker = '*', markersize = 10)
-            # plt.scatter(X_val[:,0,0],X_val[:,0,1], color = color, s = )
-            # p = ax.scatter(X, Y, c=c, s=z, cmap='viridis', vmin=0, vmax=1)
-            # plt.plot(x,y2, 'o', ms=14, markerfacecolor="None", markeredgecolor='red', markeredgewidth=5)
-            # plt.plot(X_val[:,0,0] + np.sqrt(X_val[:,1,0]), X_val[:,0,1] + np.sqrt(X_val[:,1,1]))
-            # plt.plot(X_val[:,0,0] - np.sqrt(X_val[:,1,0]), X_val[:,0,1] - np.sqrt(X_val[:,1,1]))
-            # plt.fill_between(X_val[0:20,0,0], X_val[0:20,0,0] + X_val[0:20,1,0], X_val[0:20,0,0] - X_val[0:20,1,0])
-            # var = X_val[:,0,:] + X_val[:,1,:]
-            # print((X_val[:,0,0]))
-            # X = X_val[:, 0, :] + X_val[:, 1, :]
-            # plt.fill(X_val[:,0,0] + X_val[:,1,0],  X_val[:,0,:] - X_val[:,1,:])
+            if x0.shape[-1]>1:
+                ax.plot(X_val[:,0], X_val[:,1],**kwargs)
+                ax.plot(X_val[-1,0], X_val[-1,1], color = "tab:blue", marker = '*', markersize = 10)
+                # plt.scatter(X_val[:,0,0],X_val[:,0,1], color = color, s = )
+                # p = ax.scatter(X, Y, c=c, s=z, cmap='viridis', vmin=0, vmax=1)
+                # plt.plot(x,y2, 'o', ms=14, markerfacecolor="None", markeredgecolor='red', markeredgewidth=5)
+                # plt.plot(X_val[:,0,0] + np.sqrt(X_val[:,1,0]), X_val[:,0,1] + np.sqrt(X_val[:,1,1]))
+                # plt.plot(X_val[:,0,0] - np.sqrt(X_val[:,1,0]), X_val[:,0,1] - np.sqrt(X_val[:,1,1]))
+                # plt.fill_between(X_val[0:20,0,0], X_val[0:20,0,0] + X_val[0:20,1,0], X_val[0:20,0,0] - X_val[0:20,1,0])
+                # var = X_val[:,0,:] + X_val[:,1,:]
+                # print((X_val[:,0,0]))
+                # X = X_val[:, 0, :] + X_val[:, 1, :]
+                # plt.fill(X_val[:,0,0] + X_val[:,1,0],  X_val[:,0,:] - X_val[:,1,:])
+            else:
+                ax.plot(np.linspace(0, steps-1, steps), X_val, **kwargs)
+
         else:
-            for i in range(sample_paths):
-                X_val = self.get_trajectory(x0, steps, show_mu)
-                if i > 0:
-                    kwargs["label"] = None
-                ax.plot(X_val[:,0],X_val[:,1], **kwargs)
-                # ax.plot(X_val[-1,0], X_val[-1,1], color = "tab:blue", marker = '*', markersize = 10)
+            if x0.shape[-1]>1:
+                for i in range(sample_paths):
+                    X_val = self.get_trajectory(x0, steps, show_mu)
+                    if i > 0:
+                        kwargs["label"] = None
+                    ax.plot(X_val[:,0],X_val[:,1], **kwargs)
+                    # ax.plot(X_val[-1,0], X_val[-1,1], color = "tab:blue", marker = '*', markersize = 10)
+            else:
+                for i in range(sample_paths):
+                    X_val = self.get_trajectory(x0, steps, show_mu)
+                    if i > 0:
+                        kwargs["label"] = None
+                    ax.plot(np.linspace(0, steps-1, steps), X_val, **kwargs)
 
 
         return X_val

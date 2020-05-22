@@ -68,6 +68,7 @@ class dynamics_convex(nn.Module):
         beta = 0.99
         # with torch.no_grad():
         if self.add_state:
+            # print(self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x))))
             # print(torch.norm(self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x))) - x))
             fx = x + self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
         else:

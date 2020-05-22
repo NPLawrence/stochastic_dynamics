@@ -23,13 +23,12 @@ import lyapunov_NN as L
 import generate_data
 
 # gen_data.data_linear()
-generate_data.data_Lorenz()
-print('hello')
-# generate_data.data_VanderPol()
+# lorenz = generate_data.data_Lorenz()
+VanderPol = generate_data.data_VanderPol()
 
-# lorenz.gen_data(1)
+VanderPol.gen_data(1)
 
-epochs = 1000
+epochs = 100
 batch_size = 256
 learning_rate = 0.001
 n = 2
