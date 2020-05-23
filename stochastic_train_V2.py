@@ -29,7 +29,7 @@ import generate_data
 lorenz = generate_data.data_Lorenz()
 lorenz.gen_data()
 
-epochs = 1000
+epochs = 100
 batch_size = 512
 learning_rate = 0.0025
 
