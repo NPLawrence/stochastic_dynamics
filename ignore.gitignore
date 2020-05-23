@@ -1,0 +1,4 @@
+.DS_Store
+runs/
+saved_models/
+__pycache__
