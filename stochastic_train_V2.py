@@ -26,16 +26,19 @@ import generate_data
 # gen_data.data_linear_noise()
 # multiMod = generate_data.data_multiMod()
 # multiMod.gen_data()
+lorenz = generate_data.data_Lorenz()
+lorenz.gen_data()
 
-epochs = 500
+epochs = 1000
 batch_size = 512
 learning_rate = 0.0025
 
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
-k = 5
-n = 1
+k = 1
+n = 3
 beta = 1
+mode = 1
 # fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
 #                     # nn.Linear(50, 50), nn.ReLU(),
 #                     nn.Linear(50, 50), nn.ReLU(),
@@ -43,7 +46,9 @@ beta = 1
 layer_sizes = np.array([n, 50, 50, 1])
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
-model = stochastic_model_V2.MixtureDensityNetwork(n, n, k)
+model = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
+# model = stochastic_model_V2.MixtureDensityNetwork(n, n, k)
+
 # pred_parameters = model(x)
 
 # f_net = model.dynamics_simple(fhat,V)
@@ -54,8 +59,13 @@ model = stochastic_model_V2.MixtureDensityNetwork(n, n, k)
 # PATH_f = './saved_models/simple_f_stochastic.pth'
 # PATH_V = './saved_models/rootfind_V_stochastic.pth'
 # PATH_f = './saved_models/rootfind_f_stochastic.pth'
-PATH_V = './saved_models/convex_V_stochastic_multiMod_k2.pth'
-PATH_f = './saved_models/convex_f_stochastic_multiMod_k2.pth'
+# PATH_V = './saved_models/convex_V_stochastic_multiMod_k2.pth'
+# PATH_f = './saved_models/convex_f_stochastic_multiMod_k3.pth'
+PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
+# PATH_f = './saved_models/simple_f_stochastic_Lorenz_k3.pth'
+
+
+# PATH_f = './saved_models/simple_f_stochastic_multiMod_k3.pth'
 # torch.save(f_net.state_dict(), PATH)
 
 # f_net = model.dynamics_simple(fhat,V)
@@ -68,7 +78,9 @@ PATH_f = './saved_models/convex_f_stochastic_multiMod_k2.pth'
 
 # data = pd.read_csv("./datasets/data_linear.csv")
 # data = pd.read_csv("./datasets/data_linear_noisy.csv")
-data = pd.read_csv("./datasets/data_multiMod.csv")
+# data = pd.read_csv("./datasets/data_multiMod.csv")
+data = pd.read_csv("./datasets/data_Lorenz_stable.csv")
+
 
 
 data_input = data.values[:,:2]
@@ -84,7 +96,11 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_multiMod_experiment')
+# writer = SummaryWriter('runs/convex_multiMod_experiment_k3')
+writer = SummaryWriter('runs/convex_Lorenz_experiment_k3')
+# writer = SummaryWriter('runs/simple_Lorenz_experiment_k3')
+
+
 # writer = SummaryWriter('runs/stochastic_experiment_rootfind')
 # writer = SummaryWriter('runs/stochastic_experiment_linear')
 # writer = SummaryWriter('runs/stochastic_experiment_linear_noisyData')
@@ -134,5 +150,5 @@ print('Finished Training')
 writer.close()
 
 # torch.save(ICNN.state_dict(), PATH_ICNN)
-torch.save(V.state_dict(), PATH_V)
+# torch.save(V.state_dict(), PATH_V)
 torch.save(model.state_dict(), PATH_f)

@@ -72,8 +72,8 @@ class data_linear_noise():
 class data_Lorenz():
     def __init__(self):
 
-        self.rho = 28.0
-        # self.rho = 14.0
+        # self.rho = 28.0
+        self.rho = 14.0
         self.sigma = 10.0
         self.beta = 8.0 / 3.0
 
@@ -85,7 +85,7 @@ class data_Lorenz():
 
     def gen_data(self, trajectories=1):
         data = []
-        x = np.array([[2,1,1]])
+        x = np.array([[1,1,1]])
         for i in range(2000):
 
             k1 = self.f(x)
@@ -95,7 +95,6 @@ class data_Lorenz():
             x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
             data.append(np.array((x,x_new)).reshape((1,6)).squeeze())
             x = x_new
-        print('hello')
         np.savetxt("./datasets/data_Lorenz_stable.csv", data, delimiter=",")
 
 class data_VanderPol():
@@ -133,16 +132,17 @@ class data_multiMod():
         self.h = 0.1
 
     def f(self, x, i):
-        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,1)
+        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,0.1)
+
     def f_mean(self, x, i):
         return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1))
 
-    def gen_data(self, trajectories = 1, train_data = True, x = None):
+    def gen_data(self, trajectories = 1, steps = 200, train_data = True, x = None):
         data = []
         if train_data:
-            for j in range(10):
+            for j in range(1):
                 x = np.random.normal(0,0.1)
-                for i in range(100):
+                for i in range(steps):
                     x_new = self.f(x,i)
                     data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
                     x = x_new
@@ -154,13 +154,13 @@ class data_multiMod():
             x_mean = x
             data_mean = []
             data_mean.append(np.array((x_mean)).reshape((1,1)).squeeze())
-            for i in range(100):
+            for i in range(steps):
                 x_new = self.f(x,i)
-                x_mean_new = self.f(x_mean,i)
+                x_mean_new = self.f_mean(x_mean,i)
                 data.append(np.array((x_new)).reshape((1,1)).squeeze())
                 data_mean.append(np.array((x_mean_new)).reshape((1,1)).squeeze())
                 x = x_new
-                x = x_mean_new
+                x_mean = x_mean_new
             return data, data_mean
 
 

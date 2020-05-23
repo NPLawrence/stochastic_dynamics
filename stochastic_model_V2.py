@@ -119,9 +119,9 @@ class MDN_dynamics(nn.Module):
         fhatx = self.fhat(x)
         mu, var = torch.split(fhatx, fhatx.shape[-1] // 2, dim=-1)
         if self.get_mu:
-            output = torch.stack(mu.split(mu.shape[1] // self.k, 1)).view(-1,1,self.n)
+            output = torch.stack(mu.split(mu.shape[-1] // self.k, 1)).view(-1,self.k,self.n)
         else:
-            output = torch.exp(torch.stack(var.split(var.shape[1] // self.k, 1))).view(-1,1,self.n)
+            output = torch.exp(torch.stack(var.split(var.shape[-1] // self.k, 1))).view(-1,self.k,self.n)
 
         return output
 
@@ -159,14 +159,20 @@ class MixtureDensityNetwork(nn.Module):
 
     def sample(self, x):
         pi, normal = self.forward(x)
-        samples = torch.sum(pi.sample().unsqueeze(2) * normal.sample(), dim=1)
+        # print(pi.sample().unsqueeze(1))
+        samples = torch.sum(pi.sample().unsqueeze(1) * normal.sample(), dim=1)
         return samples
+
+    def mix_mean(self, x):
+        pi, normal = self.forward(x)
+
 
 
 class MixtureDiagNormalNetwork(nn.Module):
 
     def __init__(self, in_dim, out_dim, n_components, hidden_dim=None, V = None, mode = None):
         super().__init__()
+        self.in_dim = in_dim
         self.out_dim = out_dim
         self.n_components = n_components
         self.V = V
@@ -174,14 +180,15 @@ class MixtureDiagNormalNetwork(nn.Module):
         if hidden_dim is None:
             hidden_dim = in_dim
         self.network = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ELU(),
-            nn.Linear(hidden_dim, 2 * out_dim * n_components),
-        )
+            nn.Linear(in_dim, 50), nn.Tanh(),
+            nn.Linear(50,50), nn.ReLU(),
+            nn.Linear(50, 2 * out_dim * n_components))
+
+
 
         if mode == 1:
             self.mu = MDN_dynamics(self.network, self.in_dim, self.n_components, True)
-            self.mu_dynamics = convex_model.dynamics_convex(self.mu, self.V)
+            self.mu_dynamics = convex_model.dynamics_convex(self.mu, self.V, add_state = True)
             self.var_dynamics = MDN_dynamics(self.network, self.in_dim, self.n_components, False)
 
         elif mode == 2:
@@ -194,6 +201,7 @@ class MixtureDiagNormalNetwork(nn.Module):
 
         if self.mode is None:
             params = self.network(x)
+
             mean, sd = torch.split(params, params.shape[-1] // 2, dim=-1)
             mean = torch.stack(mean.split(mean.shape[-1] // self.n_components, 1)).view(-1,self.n_components,self.out_dim)
             sd = torch.stack(sd.split(sd.shape[-1] // self.n_components, 1)).view(-1,self.n_components,self.out_dim)
@@ -201,7 +209,7 @@ class MixtureDiagNormalNetwork(nn.Module):
         else:
             mean = self.mu_dynamics(x)
             var = self.var_dynamics(x)
-            return Normal(mean.transpose(0, 1), var.transpose(0, 1))
+            return Normal(mean, var)
 
 
 class CategoricalNetwork(nn.Module):
@@ -210,12 +218,17 @@ class CategoricalNetwork(nn.Module):
         super().__init__()
         if hidden_dim is None:
             hidden_dim = in_dim
+        # self.network = nn.Sequential(
+        #     nn.Linear(in_dim, hidden_dim),
+        #     nn.ELU(),
+        #     nn.Linear(hidden_dim, out_dim)
+        # )
+
         self.network = nn.Sequential(
-            nn.Linear(in_dim, hidden_dim),
-            nn.ELU(),
-            nn.Linear(hidden_dim, out_dim)
-        )
+            nn.Linear(in_dim, 50), nn.Tanh(),
+            nn.Linear(50,50), nn.ReLU(),
+            nn.Linear(50, out_dim))
 
     def forward(self, x):
         params = self.network(x)
-        return OneHotCategorical(logits=params.squeeze())
+        return OneHotCategorical(logits=params)

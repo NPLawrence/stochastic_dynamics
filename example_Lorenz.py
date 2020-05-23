@@ -14,21 +14,31 @@ import torch.optim as optim
 
 import convex_model as model
 import rootfind_model
-import stochastic_model
+import stochastic_model_V2
 
 import lyapunov_NN as L
 import dynamics_plotting as vis
 import generate_data
 
 
+k = 1
 n = 3
+beta = 1
+mode = 1
 add_state = True
 
 f_simple = model.fhat(np.array([n, 25, 25, 25, n]), True)
 fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
 layer_sizes = np.array([n, 25, 25, 1])
+layer_sizes = np.array([n, 50, 50, 1])
+
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
+
+
+f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
+
+
 
 # ICNN = L.ICNN_2(layer_sizes)
 # V_noise = L.MakePSD(L.ICNN_2(layer_sizes),2)
@@ -40,14 +50,21 @@ V = L.MakePSD(ICNN,n)
 # PATH_f_noise = './saved_models/simple_f_stochastic_noisyData_ICNN2.pth'
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN_noisyData_ICNN2.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN_noisyData_ICNN2.pth'
-PATH_V = './saved_models/convex_V_Lorenz.pth'
-PATH_f = './saved_models/convex_f_Lorenz.pth'
+# PATH_V = './saved_models/convex_V_Lorenz.pth'
+# PATH_f = './saved_models/convex_f_Lorenz.pth'
 PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
+
+PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
+
+
+
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN.pth'
-V.load_state_dict(torch.load(PATH_V))
-fhat.load_state_dict(torch.load(PATH_f))
-f = model.dynamics_convex(fhat,V,add_state)
+# V.load_state_dict(torch.load(PATH_V))
+# fhat.load_state_dict(torch.load(PATH_f))
+# f = model.dynamics_convex(fhat,V,add_state)
+f.load_state_dict(torch.load(PATH_f))
+
 f_simple.load_state_dict(torch.load(PATH_f_simple))
 
 
@@ -59,24 +76,20 @@ f_simple.load_state_dict(torch.load(PATH_f_simple))
 # f_noise = stochastic_model.MDN_module(fhat_noise, V_noise, k, is_training = False, show_mu = False)
 # f_noise_mu = stochastic_model.MDN_module(fhat_noise, V_noise, k, is_training = False, show_mu = True)
 
-# x0 = torch.tensor([[[-.75,-.75]]], dtype = torch.float)
-# x0 = torch.rand(size = [1,1,2])
 
 
 
-
-
-x0 = torch.tensor([[[2,1,1]]], dtype = torch.float)
+x0 = torch.tensor([[[1,1,1]]], dtype = torch.float)
 
 lorenz = generate_data.data_Lorenz()
 lorenz.gen_data(1)
-# x0 = torch.tensor([[[-0.75, 3.15]]], dtype = torch.float)
 
-# A = torch.tensor([[0.90, 1],[0, 0.90]])
-# f_true = lambda x : F.linear(x, A, bias = False)
-
-plotting = vis.plot_dynamics_3D(f,V)
+plotting = vis.plot_dynamics_3D(f,V,show_mu = True, is_stochastic = True)
 plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
+
+# plotting = vis.plot_dynamics_3D(f,V)
+# plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
+
 # plotting_mu = vis.plot_dynamics(f_mu,V)
 # plotting_noise = vis.plot_dynamics(f_noise,V_noise)
 # plotting_noise_mu = vis.plot_dynamics(f_noise_mu,V_noise)
@@ -112,7 +125,7 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 # ax1 = plt.subplot(111)
 
 kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
-X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, show_mu = True, steps = 2000)
+X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
 X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}

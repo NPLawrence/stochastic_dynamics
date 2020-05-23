@@ -12,15 +12,17 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class plot_dynamics(nn.Module):
-    def __init__(self, f, V):
+    def __init__(self, f, V, show_mu = False, is_stochastic = False):
         super().__init__()
 
         self.f = f
         self.V = V
+        self.show_mu = show_mu
+        self.is_stochastic = is_stochastic
 
-    def get_trajectory(self, x0, steps, show_mu = False):
+    def get_trajectory(self, x0, steps):
 
-        if show_mu:
+        if self.show_mu:
             mu = x0
             # y = self.f(mu)
             # X = torch.empty([steps,2,mu.squeeze().size(0)])
@@ -36,23 +38,30 @@ class plot_dynamics(nn.Module):
 
             with torch.no_grad():
 
-                if show_mu:
-                    y = self.f(mu)
+                if self.show_mu:
+                    pi, normal = self.f(mu)
+
+                    mu = torch.sum(pi.probs.view(-1,1)*normal.loc,1).view(-1,1,x0.shape[-1])
+                    # mu = torch.sum(pi*normal.loc,1)
+                    # print(mu)
                     # mu = y[0].unsqueeze(dim = 0)
-                    mu = y[0].view(-1,1,mu.shape[-1])
+                    # mu = y[0].view(-1,1,mu.shape[-1])
                     # var = y[1]
                     X[i+1,:] = mu
 
                 else:
-                    x = self.f(x)
+                    if self.is_stochastic:
+                        x = self.f.sample(x)
+                    else:
+                        x = self.f(x)
                     X[i+1,:] = x
 
         return X.detach().numpy()
 
 
-    def plot_trajectory(self, x0, kwargs, sample_paths = 1, show_ls = True, show_mu = False, steps = 600, ax = plt):
+    def plot_trajectory(self, x0, kwargs, sample_paths = 1, show_ls = True, steps = 600, ax = plt):
 
-        X_val = self.get_trajectory(x0, steps, show_mu)
+        X_val = self.get_trajectory(x0, steps)
 
         if show_ls:
 
@@ -83,7 +92,7 @@ class plot_dynamics(nn.Module):
             # Display z values on contour lines
             ax.clabel(contours, inline=1, fontsize=10, fmt = '%1.0f')
 
-        if show_mu:
+        if self.show_mu:
 
             if x0.shape[-1]>1:
                 ax.plot(X_val[:,0], X_val[:,1],**kwargs)
@@ -104,14 +113,14 @@ class plot_dynamics(nn.Module):
         else:
             if x0.shape[-1]>1:
                 for i in range(sample_paths):
-                    X_val = self.get_trajectory(x0, steps, show_mu)
+                    X_val = self.get_trajectory(x0, steps)
                     if i > 0:
                         kwargs["label"] = None
                     ax.plot(X_val[:,0],X_val[:,1], **kwargs)
                     # ax.plot(X_val[-1,0], X_val[-1,1], color = "tab:blue", marker = '*', markersize = 10)
             else:
                 for i in range(sample_paths):
-                    X_val = self.get_trajectory(x0, steps, show_mu)
+                    X_val = self.get_trajectory(x0, steps)
                     if i > 0:
                         kwargs["label"] = None
                     ax.plot(np.linspace(0, steps-1, steps), X_val, **kwargs)
@@ -167,36 +176,66 @@ class plot_dynamics(nn.Module):
 
 
 class plot_dynamics_3D(nn.Module):
-    def __init__(self, f, V):
+    def __init__(self, f, V, show_mu = False, is_stochastic = False):
         super().__init__()
 
         self.f = f
         self.V = V
+        self.show_mu = show_mu
+        self.is_stochastic = is_stochastic
 
-    def get_trajectory(self, x0, steps, show_mu = False):
+    def get_trajectory(self, x0, steps):
 
-        x = x0
-        X = torch.empty([steps,x.squeeze().size(0)])
-        X[0,:] = x.squeeze()
+        if self.show_mu:
+            mu = x0
+            # y = self.f(mu)
+            # X = torch.empty([steps,2,mu.squeeze().size(0)])
+            X = torch.empty([steps,mu.shape[-1]])
+            X[0,:] = mu.squeeze()
+            # X[0,:] = torch.stack([mu.squeeze(), torch.zeros_like(mu.squeeze())])
+        else:
+            x = x0
+            X = torch.empty([steps, x.shape[-1]])
+            X[0,:] = x.squeeze()
 
         with torch.no_grad():
-            for i in range(steps-1):
 
-                    x = self.f(x)
+            for i in range(steps-1):
+                if self.show_mu:
+
+
+                    pi, normal = self.f(mu)
+
+                    # print(pi.probs.view(-1,1)*normal.loc)
+                    # print(torch.sum(pi.probs.view(-1,1)*normal.loc,1))
+                    mu = torch.sum(pi.probs.view(-1,1)*normal.loc,1).view(-1,1,x0.shape[-1])
+                    # mu = torch.sum(pi*normal.loc,1)
+                    # print(mu)
+                    # mu = y[0].unsqueeze(dim = 0)
+                    # mu = y[0].view(-1,1,mu.shape[-1])
+                    # var = y[1]
+                    X[i+1,:] = mu
+
+                else:
+                    if self.is_stochastic:
+                        x = self.f.sample(x)
+                    else:
+                        x = self.f(x)
                     X[i+1,:] = x
 
         return X.detach().numpy()
 
 
-    def plot_trajectory(self, x0, kwargs, sample_paths = 1, show_mu = False, steps = 200):
+    def plot_trajectory(self, x0, kwargs, sample_paths = 1, steps = 200):
 
         # rho = 28.0
         # sigma = 10.0
         # beta = 8.0 / 3.0
         # fig = plt.figure()
         # fig.gca(projection='3d')
+
         for i in range(sample_paths):
-            X_val = self.get_trajectory(x0, steps, show_mu)
+            X_val = self.get_trajectory(x0, steps)
             if i > 0:
                 kwargs["label"] = None
 
