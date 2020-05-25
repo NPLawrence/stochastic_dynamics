@@ -22,19 +22,19 @@ import lyapunov_NN as L
 
 import generate_data
 
-# gen_data.data_linear()
-# lorenz = generate_data.data_Lorenz()
-VanderPol = generate_data.data_VanderPol()
-
-VanderPol.gen_data(1)
+# generate_data.data_linear(two_step = True, add_noise = False)
+lorenz = generate_data.data_Lorenz(two_step = False)
+lorenz.gen_data()
+# VanderPol = generate_data.data_VanderPol()
+# VanderPol.gen_data(1)
 
 epochs = 100
-batch_size = 256
-learning_rate = 0.001
+batch_size = 512
+learning_rate = 0.005
 n = 2
 add_state = True
 
-fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
+# fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
 
 layer_sizes = np.array([n, 25, 25, 1])
 ICNN = L.ICNN(layer_sizes)
@@ -42,33 +42,49 @@ V = L.MakePSD(ICNN,n)
 # layer_sizes = np.array([2, 50, 50, 50])
 # V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
 
-PATH_V = './saved_models/convex_V_VanderPol_stable.pth'
-PATH_f = './saved_models/convex_f_VanderPol_stable.pth'
+# PATH_V = './saved_models/convex_V_VanderPol_stable.pth'
+# PATH_f = './saved_models/convex_f_VanderPol_stable.pth'
+# PATH_f = './saved_models/convex_f_linear_twostep.pth'
+PATH_f = './saved_models/convex_f_Lorenz.pth'
+PATH_V = './saved_models/convex_V_Lorenz.pth'
+
+
 # PATH_V = './saved_models/convex_V_Lorenz_stable.pth'
 # PATH_f = './saved_models/convex_f_Lorenz_stable.pth'
 # PATH_f = './saved_models/simple_f_Lorenz.pth'
 # PATH_f = './saved_models/simple_fICNN2.pth'
 
-f_net = model.dynamics_convex(fhat,V,add_state)
+f_net = model.dynamics_convex(V, n, beta = 0.99, add_state=add_state)
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
-data = pd.read_csv("./datasets/data_VanderPol_stable.csv")
+# data = pd.read_csv("./datasets/data_Lorenz_stable.csv")
+data = pd.read_csv("./datasets/data_linear.csv")
 
-data_input = data.values[:,:2]
-data_output = data.values[:,2:]
+# data = pd.read_csv("./datasets/data_Lorenz_stable_twostep.csv")
+# data = pd.read_csv("./datasets/data_linear_twostep.csv")
+
+if add_state:
+    data_input = data.values[:,:n*2]
+    data_output = data.values[:,n*2:]
+else:
+    data_input = data.values[:,:n]
+    data_output = data.values[:,n:]
 Trn_input,  Val_inp, Trn_target,Val_target = train_test_split(data_input, data_output, test_size=0.2,random_state=123)
 # Train_data has our training dataset and Valid_data has our validation dataset.
 Train_data = pd.concat([pd.DataFrame(Trn_input), pd.DataFrame(Trn_target)], axis=1)
 Valid_data = pd.concat([pd.DataFrame(Val_inp), pd.DataFrame(Val_target)], axis=1)
 # training and validation dataset
-train_dataset = generate_data.oversampdata(Train_data)
-valid_dataset = generate_data.oversampdata(Valid_data)
+train_dataset = generate_data.oversampdata(Train_data,add_state = False,n = n)
+valid_dataset = generate_data.oversampdata(Valid_data,add_state = False,n = n)
 
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_experiment_VanderPol_stable')
+writer = SummaryWriter('runs/convex_experiment_Lorenz_twostep')
+
+# writer = SummaryWriter('runs/convex_experiment_linear_twostep')
+# writer = SummaryWriter('runs/convex_experiment_VanderPol_stable')
 # writer = SummaryWriter('runs/convex_experiment_Lorenz_stable')
 # writer = SummaryWriter('runs/simple_experiment_Lorenz')
 
@@ -99,14 +115,14 @@ for epoch in range(epochs):
     for name, weight in f_net.named_parameters():
         writer.add_histogram(name, weight, epoch)
         # print(f'{name}')
-        # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+        # print(f'{name}.grad', weight.grad)
     if epoch % 10 == 0:
         print("Epoch: ", epoch, "Running loss: ", running_loss)
-input, labels = next(iter(train_loader))
-writer.add_graph(f_net, input)
+# input, labels = next(iter(train_loader))
+# writer.add_graph(f_net, input)
 print('Finished Training')
 writer.close()
 
 # torch.save(ICNN.state_dict(), PATH_ICNN)
 torch.save(V.state_dict(), PATH_V)
-torch.save(fhat.state_dict(), PATH_f)
+torch.save(f_net.state_dict(), PATH_f)

@@ -18,24 +18,26 @@ from torch.utils.tensorboard import SummaryWriter
 torch.set_grad_enabled(True)
 
 import stochastic_model
+import stochastic_model_V3
+
 import lyapunov_NN as L
 
 import generate_data
 
-# gen_data.data_linear()
-# gen_data.data_linear_noise()
-multiMod = generate_data.data_multiMod()
-multiMod.gen_data()
+generate_data.data_linear(add_noise = False)
+# multiMod = generate_data.data_multiMod()
+# multiMod.gen_data()
 
-epochs = 500
+epochs = 200
 batch_size = 512
-learning_rate = 0.0025
+learning_rate = 0.005
 
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 k = 2
-n = 1
-beta = 1
+n = 2
+beta = 0.99
+mode = 1
 fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
                     # nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(50, 50), nn.ReLU(),
@@ -48,23 +50,25 @@ V = L.MakePSD(ICNN,n)
 # PATH_V = './saved_models/simple_V_stochastic_noisyData.pth'
 # PATH_f = './saved_models/simple_f_stochastic_noisyData.pth'
 # PATH_V = './saved_models/simple_V_stochastic.pth'
-# PATH_f = './saved_models/simple_f_stochastic.pth'
+PATH_f = './saved_models/convex_f_stochastic.pth'
 # PATH_V = './saved_models/rootfind_V_stochastic.pth'
 # PATH_f = './saved_models/rootfind_f_stochastic.pth'
-PATH_V = './saved_models/convex_V_stochastic_multiMod.pth'
-PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
+# PATH_V = './saved_models/convex_V_stochastic_multiMod.pth'
+# PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
+# PATH_V = './saved_models/convex_V_stochastic_linear_V3.pth'
+# PATH_f = './saved_models/convex_f_stochastic_linear_V3.pth'
 # torch.save(f_net.state_dict(), PATH)
 
 # f_net = model.dynamics_simple(fhat,V)
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = stochastic_model.stochastic_module(fhat, V, k)
-f_net = stochastic_model.MDN_module(fhat, V, n=n, k=k, beta = beta)
+f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta)
 
 # f_net = fhat
 
-# data = pd.read_csv("./datasets/data_linear.csv")
-# data = pd.read_csv("./datasets/data_linear_noisy.csv")
-data = pd.read_csv("./datasets/data_multiMod.csv")
+data = pd.read_csv("./datasets/data_linear.csv")
+# data = pd.read_csv("./datasets/data_linear_noise.csv")
+# data = pd.read_csv("./datasets/data_multiMod.csv")
 
 
 data_input = data.values[:,:2]
@@ -80,9 +84,9 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_multiMod_experiment')
+# writer = SummaryWriter('runs/convex_multiMod_experiment')
 # writer = SummaryWriter('runs/stochastic_experiment_rootfind')
-# writer = SummaryWriter('runs/stochastic_experiment_linear')
+writer = SummaryWriter('runs/stochastic_experiment_linear')
 # writer = SummaryWriter('runs/stochastic_experiment_linear_noisyData')
 
 
@@ -108,7 +112,7 @@ for epoch in range(epochs):
 
         inputs, labels = data
         optimizer.zero_grad()
-        outputs, logp_labels = f_net(inputs, labels)
+        logp_labels = f_net(inputs, labels)
         loss = logp_labels
         # _,logp_target = f_net.target_distribution(V(labels))
         # loss = criterion(outputs, labels)
@@ -122,12 +126,13 @@ for epoch in range(epochs):
     #     print(f'{name}', weight.grad)
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-    print("Epoch: ", epoch, "Running loss: ", running_loss)
+    if epoch % 10 == 0:
+        print("Epoch: ", epoch, "Running loss: ", running_loss)
 # images, labels = next(iter(train_loader))
 # writer.add_graph(f_net, images)
 print('Finished Training')
 writer.close()
 
 # torch.save(ICNN.state_dict(), PATH_ICNN)
-torch.save(V.state_dict(), PATH_V)
-torch.save(fhat.state_dict(), PATH_f)
+# torch.save(V.state_dict(), PATH_V)
+torch.save(f_net.state_dict(), PATH_f)

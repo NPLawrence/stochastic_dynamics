@@ -47,13 +47,13 @@ PATH_V_noise = './saved_models/simple_V_stochastic_noisyData.pth'
 PATH_f_noise = './saved_models/simple_f_stochastic_noisyData.pth'
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN_noisyData_ICNN2.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN_noisyData_ICNN2.pth'
-PATH_V = './saved_models/simple_V_stochastic.pth'
+# PATH_V = './saved_models/simple_V_stochastic.pth'
 PATH_f = './saved_models/simple_f_stochastic.pth'
 PATH_V_rf_noise = './saved_models/rootfind_V_stochastic.pth'
 PATH_f_rf_noise = './saved_models/rootfind_f_stochastic.pth'
 
-V.load_state_dict(torch.load(PATH_V))
-fhat.load_state_dict(torch.load(PATH_f))
+# V.load_state_dict(torch.load(PATH_V))
+# fhat.load_state_dict(torch.load(PATH_f))
 V_noise.load_state_dict(torch.load(PATH_V_noise))
 fhat_noise.load_state_dict(torch.load(PATH_f_noise))
 V_rf_noise.load_state_dict(torch.load(PATH_V_rf_noise))

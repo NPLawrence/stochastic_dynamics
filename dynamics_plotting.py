@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
-print('hello world')
 from mpl_toolkits.mplot3d import Axes3D
 import pylab
 import random
@@ -40,9 +39,10 @@ class plot_dynamics(nn.Module):
             with torch.no_grad():
 
                 if self.show_mu:
-                    pi, normal = self.f(mu)
+                    mu = self.f(mu)
 
-                    mu = torch.sum(pi.probs.view(-1,1)*normal.loc,1).view(-1,1,x0.shape[-1])
+
+                    # mu = torch.sum(pi.view(-1,1)*normal.loc,1).view(-1,1,x0.shape[-1])
                     # mu = torch.sum(pi*normal.loc,1)
                     # print(mu)
                     # mu = y[0].unsqueeze(dim = 0)
@@ -55,6 +55,7 @@ class plot_dynamics(nn.Module):
                         x = self.f.sample(x)
                     else:
                         x = self.f(x)
+
                     X[i+1,:] = x
 
         return X.detach().numpy()

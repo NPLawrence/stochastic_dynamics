@@ -17,6 +17,8 @@ from torch.distributions.normal import Normal
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.beta import Beta
 
+import torch.distributions as D
+
 import convex_model
 import rootfind_model
 
@@ -81,7 +83,7 @@ class stochastic_module(nn.Module):
 
         self.mu_dynamics = MDN_dynamics(self.fhat, self.n, self.k, True)
         self.mu_rootfind = rootfind_model.rootfind_module(self.mu_dynamics, self.V, is_training, beta)
-        self.var_dynamics = MDN_dynamics(self.fhat, self.n, self.k,False)
+        self.var_dynamics = MDN_dynamics(self.fhat, self.n, self.k, False)
 
     def forward(self, x, y = None):
         #Perform a noisy forward pass in fhat and V
@@ -145,22 +147,41 @@ class MixtureDensityNetwork(nn.Module):
         self.pi_network = CategoricalNetwork(dim_in, n_components)
         self.normal_network = MixtureDiagNormalNetwork(dim_in, dim_out,
                                                        n_components, V = V, mode = mode)
+        self.n_components = n_components
 
     def forward(self, x):
         return self.pi_network(x), self.normal_network(x)
 
     def loss(self, x, y):
         pi, normal = self.forward(x)
-        loglik = normal.log_prob(y.expand_as(normal.loc))
-        loglik = torch.sum(loglik, dim=2)
-        loss = -torch.logsumexp(torch.log(pi.probs) + loglik, dim=1)
+        # print(normal.mean)
+        loglik = normal.log_prob(y.expand_as(normal.mean))
+        # print(loglik)
+        # loglik = torch.sum(loglik, dim=2)
+        loss = -torch.logsumexp(torch.log(pi) + loglik, dim=1)
         loss = loss.mean()
-        return loss
+        mse = torch.mean((self.sample(x) - y)**2)
+
+        # pi, normal = self.forward(x)
+        # loglik = torch.exp(normal.log_prob(y.expand_as(normal.loc)))
+        # # print(loglik)
+        # loglik = torch.sum(loglik, dim=2)
+        # # print(loglik)
+        # loss = -torch.log(pi*loglik)
+        # # print(pi)
+        # # print(pi.probs[1])
+        # # print(loss)
+        # # loss = -torch.logsumexp(torch.log(pi.probs) + loglik, dim=1)
+        # loss = loss.mean()
+        # print(torch.mean((self.sample(x) - y))**2)
+        # print(torch.mean((self.sample(x) - y))**2)
+        return loss, mse
 
     def sample(self, x):
         pi, normal = self.forward(x)
         # print(pi.sample().unsqueeze(1))
-        samples = torch.sum(pi.sample().unsqueeze(1) * normal.sample(), dim=1)
+        # samples = torch.sum(pi.sample().unsqueeze(1) * normal.sample(), dim=1)
+        samples = torch.sum(pi * normal.sample(), dim=1)
         return samples
 
     def mix_mean(self, x):
@@ -188,8 +209,9 @@ class MixtureDiagNormalNetwork(nn.Module):
 
         if mode == 1:
             self.mu = MDN_dynamics(self.network, self.in_dim, self.n_components, True)
-            self.mu_dynamics = convex_model.dynamics_convex(self.mu, self.V, add_state = True)
+            self.mu_dynamics = convex_model.dynamics_convex(self.mu, self.V, add_state = False)
             self.var_dynamics = MDN_dynamics(self.network, self.in_dim, self.n_components, False)
+
 
         elif mode == 2:
             self.mu = MDN_dynamics(self.network, self.in_dim, self.n_components, True)
@@ -205,11 +227,13 @@ class MixtureDiagNormalNetwork(nn.Module):
             mean, sd = torch.split(params, params.shape[-1] // 2, dim=-1)
             mean = torch.stack(mean.split(mean.shape[-1] // self.n_components, 1)).view(-1,self.n_components,self.out_dim)
             sd = torch.stack(sd.split(sd.shape[-1] // self.n_components, 1)).view(-1,self.n_components,self.out_dim)
-            return Normal(mean, torch.exp(sd))
+            return D.Independent(Normal(mean, torch.exp(sd)),1)
         else:
+
             mean = self.mu_dynamics(x)
+
             var = self.var_dynamics(x)
-            return Normal(mean, var)
+            return D.Independent(Normal(mean, var),1)
 
 
 class CategoricalNetwork(nn.Module):
@@ -227,8 +251,11 @@ class CategoricalNetwork(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(in_dim, 50), nn.Tanh(),
             nn.Linear(50,50), nn.ReLU(),
-            nn.Linear(50, out_dim))
+            nn.Linear(50, 1))
 
     def forward(self, x):
         params = self.network(x)
-        return OneHotCategorical(logits=params)
+        # print(params)
+        # print(F.softmax(params, dim = -1))
+        # return OneHotCategorical(logits=params)
+        return F.softmax(params, dim = -1)

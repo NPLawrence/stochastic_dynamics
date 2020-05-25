@@ -30,13 +30,14 @@ add_state = True
 f_simple = model.fhat(np.array([n, 25, 25, 25, n]), True)
 fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
 layer_sizes = np.array([n, 25, 25, 1])
-layer_sizes = np.array([n, 50, 50, 1])
+# layer_sizes = np.array([n, 50, 50, 1])
 
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
 
+f = model.dynamics_convex(V, n, beta = 0.99, add_state = add_state)
 
-f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
+# f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 
 
 
@@ -52,9 +53,10 @@ f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN_noisyData_ICNN2.pth'
 # PATH_V = './saved_models/convex_V_Lorenz.pth'
 # PATH_f = './saved_models/convex_f_Lorenz.pth'
-PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
+# PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
 
-PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
+# PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
+PATH_f = './saved_models/convex_f_Lorenz.pth'
 
 
 
@@ -65,7 +67,7 @@ PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
 # f = model.dynamics_convex(fhat,V,add_state)
 f.load_state_dict(torch.load(PATH_f))
 
-f_simple.load_state_dict(torch.load(PATH_f_simple))
+# f_simple.load_state_dict(torch.load(PATH_f_simple))
 
 
 # V_noise.load_state_dict(torch.load(PATH_V_noise))
@@ -84,8 +86,8 @@ x0 = torch.tensor([[[1,1,1]]], dtype = torch.float)
 lorenz = generate_data.data_Lorenz()
 lorenz.gen_data(1)
 
-plotting = vis.plot_dynamics_3D(f,V,show_mu = True, is_stochastic = True)
-plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
+plotting = vis.plot_dynamics_3D(f,V,show_mu = False, is_stochastic = False)
+# plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
 
 # plotting = vis.plot_dynamics_3D(f,V)
 # plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
@@ -125,7 +127,7 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 # ax1 = plt.subplot(111)
 
 kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
-X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
+# X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
 X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}

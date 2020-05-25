@@ -24,19 +24,40 @@ class MakePSD(nn.Module):
     def __init__(self, f, n, eps=0.01, d=0.1):
         super().__init__()
         self.f = f
-        self.zero = torch.nn.Parameter(f(torch.zeros((1,1,n))), requires_grad=False)
+        # self.zero = torch.nn.Parameter(f(torch.zeros((1,1,n))), requires_grad=False)
         self.eps = eps
         self.d = d
         # self.rehu = ReHU.apply
         self.rehu = ReHU(self.d)
 
     def forward(self, x):
-
-        smoothed_output = self.rehu(self.f(x) - self.zero)
+        # zero = self.f(torch.zeros((1,1,x.shape[-1])))
+        smoothed_output = self.rehu(self.f(x))
 
         quadratic_under = self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
 
         return smoothed_output + quadratic_under
+
+# class MakePSD(nn.Module):
+#     def __init__(self, f, n, eps=0.01, d=0.1):
+#         super().__init__()
+#         self.f = f
+#
+#         self.eps = eps
+#         self.d = d
+#         self.n = n
+#         # self.rehu = ReHU.apply
+#         self.rehu = ReHU(self.d)
+#
+#     def forward(self, x):
+#
+#         zero = self.f(torch.zeros((1,1,x.shape[-1])))
+#         smoothed_output = self.rehu(self.f(x) - zero)
+#
+#         quadratic_under = self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
+#
+#         return smoothed_output + quadratic_under
+
 
 class ICNN(nn.Module):
     def __init__(self, layer_sizes, activation=F.relu_):

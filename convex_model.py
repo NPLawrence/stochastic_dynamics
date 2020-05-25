@@ -52,30 +52,129 @@ class fhat(nn.Module):
 
 class dynamics_convex(nn.Module):
     #Modifies fhat via a simple scaling rule, exploiting convexity
-    def __init__(self, fhat, V, add_state = False):
+    def __init__(self, V, n, beta = 0.99, add_state = False, fhat = None):
         super().__init__()
 
         # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
         #                     nn.Linear(50, 50), nn.ReLU(),
         #                     nn.Linear(50, 50), nn.ReLU(),
         #                     nn.Linear(50, 2))
-
-        self.fhat = fhat
+        if fhat is None:
+            self.fhat = fhat(np.array([n, 25, 25, 25, n]), False)
+        else:
+            self.fhat = fhat
         self.V = V
+        self.beta = beta
         self.add_state = add_state
 
     def forward(self, x):
-        beta = 0.99
         # with torch.no_grad():
-        if self.add_state:
-            # print(self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x))))
-            # print(torch.norm(self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x))) - x))
-            fx = x + self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
-        else:
-            fx = self.fhat(x)*((beta*self.V(x) - F.relu(beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
-            # fx = self.fhat(x)
 
+        if self.add_state:
+            fx = x + self.fhat(x)*((self.beta*self.V(x) - F.relu(self.beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+            # print(self.V(fx - x))
+        else:
+
+            fx = self.fhat(x)*((self.beta*self.V(x) - F.relu(self.beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
         return fx
+
+# class dynamics_convex(nn.Module):
+#     #Modifies fhat via a simple scaling rule, exploiting convexity
+#     def __init__(self, V, n, beta = 0.99, add_state = False, is_training = False, is_initial = True):
+#         super().__init__()
+#
+#         # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
+#         #                     nn.Linear(50, 50), nn.ReLU(),
+#         #                     nn.Linear(50, 50), nn.ReLU(),
+#         #                     nn.Linear(50, 2))
+#
+#         self.fhat = fhat(np.array([n, 25, 25, 25, n]), False)
+#         # self.x_inf = nn.Sequential(nn.Identity(n,1))
+#         self.p = torch.nn.init.normal_(nn.Parameter(torch.zeros(1,n)), mean=0.0, std=1)
+#         self.x_inf = nn.Identity()
+#         self.V = V
+#         self.beta = beta
+#         self.add_state = add_state
+#         self.is_training = is_training
+#         self.is_initial = is_initial
+#         # self.target = 10000*torch.ones((1,1,n)) #used for add_state method
+#                                                #    just make sure this value is sufficiently large
+#
+#     # def forward(self, x):
+#     #     # with torch.no_grad():
+#     #     if self.add_state:
+#     #         if self.is_training:
+#     #
+#     #
+#     #             state = x - self.p
+#     #             target = self.beta*self.V(state)
+#     #             fx = self.fhat(state)*((target - F.relu(target - self.V(self.fhat(state)))) / self.V(self.fhat(state)))
+#     #             self.p = self.x_inf(self.p)
+#     #             fx = fx + self.p
+#     #
+#     #         else:
+#     #             if self.is_initial:
+#     #                 # self.target = self.beta*self.V(x)
+#     #                 self.dif = 10000*torch.ones((1,1,3))
+#     #                 self.target = self.beta*self.V(self.dif)
+#     #                 self.is_initial = False
+#     #
+#     #             fx = x + self.fhat(x)*((self.target - F.relu(self.target - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+#     #             # print(self.V(self.fhat(x)))
+#     #             self.dif = fx - x
+#     #             self.target = self.beta*self.V(self.dif)
+#     #     else:
+#     #         fx = self.fhat(x)*((self.beta*self.V(x) - F.relu(self.beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+#     #     # print(self.p)
+#     #     return fx
+#
+#     def forward(self, x):
+#         # with torch.no_grad():
+#         if self.add_state:
+#             if self.is_training:
+#                 input = x[:,:,:x.shape[-1]//2]
+#                 # input = x[:,:,x.shape[-1]//2:]
+#                 # target1 = self.beta*self.V(input)
+#                 dif1 = self.fhat(input)
+#                 target = self.beta*self.V(dif1)
+#                 output1 = dif1 + input
+#
+#                 dif2 = self.fhat(output1)*((target - F.relu(target - self.V(self.fhat(output1)))) / self.V(self.fhat(output1)))
+#                 fx = dif2 + output1
+#
+#
+#
+#                 # input = x[:]
+#                 # state = input - target_val
+#                 # target = self.beta*self.V(state)
+#                 # fx = input + self.fhat(state)*((target - F.relu(target - self.V(self.fhat(state)))) / self.V(self.fhat(state)))
+#                 # target_val = x[:,:,:x.shape[-1]//2]
+#                 # input = x[:,:,x.shape[-1]//2:]
+#                 #
+#                 # x0 = target_val[:,:,0]
+#                 # x1 = target_val[:,:,1]
+#                 # # input = x[:]
+#                 # state = input - target_val
+#                 # target = self.beta*self.V(state)
+#                 # fx = input + self.fhat(state)*((target - F.relu(target - self.V(self.fhat(state)))) / self.V(self.fhat(state)))
+#
+#             else:
+#                 if self.is_initial:
+#                     # self.target = self.beta*self.V(x)
+#                     self.state = self.fhat(x)
+#                     fx = self.state + x
+#                     self.target = self.beta*self.V(self.state)
+#                     self.is_initial = False
+#                 else:
+#
+#                     self.state = self.fhat(self.state)*((self.target - F.relu(self.target - self.V(self.fhat(self.state)))) / self.V(self.fhat(self.state)))
+#                     # print(self.dif)
+#                     fx = self.state +  x
+#                     self.target = self.beta*self.V(self.state)
+#         else:
+#             fx = self.fhat(x)*((self.beta*self.V(x) - F.relu(self.beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+#
+#         return fx
 
 class dynamics_nonincrease(nn.Module):
     #Modifies fhat by ensuring 'non-expansiveness'

@@ -22,22 +22,23 @@ import lyapunov_NN as L
 
 import generate_data
 
-# gen_data.data_linear()
+generate_data.data_linear()
+# linear.gen_data()
 # gen_data.data_linear_noise()
 # multiMod = generate_data.data_multiMod()
 # multiMod.gen_data()
-lorenz = generate_data.data_Lorenz()
-lorenz.gen_data()
+# lorenz = generate_data.data_Lorenz()
+# lorenz.gen_data()
 
 epochs = 100
 batch_size = 512
-learning_rate = 0.0025
+learning_rate = 0.001
 
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 k = 1
-n = 3
-beta = 1
+n = 2
+beta = 0.99
 mode = 1
 # fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
 #                     # nn.Linear(50, 50), nn.ReLU(),
@@ -61,8 +62,10 @@ model = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 # PATH_f = './saved_models/rootfind_f_stochastic.pth'
 # PATH_V = './saved_models/convex_V_stochastic_multiMod_k2.pth'
 # PATH_f = './saved_models/convex_f_stochastic_multiMod_k3.pth'
-PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
+# PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
 # PATH_f = './saved_models/simple_f_stochastic_Lorenz_k3.pth'
+PATH_f = './saved_models/convex_f_stochastic_linear_k3.pth'
+
 
 
 # PATH_f = './saved_models/simple_f_stochastic_multiMod_k3.pth'
@@ -76,10 +79,10 @@ PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
 
 # f_net = fhat
 
-# data = pd.read_csv("./datasets/data_linear.csv")
+data = pd.read_csv("./datasets/data_linear.csv")
 # data = pd.read_csv("./datasets/data_linear_noisy.csv")
 # data = pd.read_csv("./datasets/data_multiMod.csv")
-data = pd.read_csv("./datasets/data_Lorenz_stable.csv")
+# data = pd.read_csv("./datasets/data_Lorenz_stable.csv")
 
 
 
@@ -97,7 +100,9 @@ train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
 # writer = SummaryWriter('runs/convex_multiMod_experiment_k3')
-writer = SummaryWriter('runs/convex_Lorenz_experiment_k3')
+# writer = SummaryWriter('runs/convex_Lorenz_experiment_k3')
+writer = SummaryWriter('runs/convex_linear_experiment_k3')
+
 # writer = SummaryWriter('runs/simple_Lorenz_experiment_k3')
 
 
@@ -123,6 +128,7 @@ model.train()
 for epoch in range(epochs):
 
     running_loss = 0.0
+    running_mse = 0.0
 
     for i, data in enumerate(train_loader, 0):
 
@@ -130,20 +136,22 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         # outputs = model(inputs)
 
-        loss = model.loss(inputs, labels)
+        loss, mse = model.loss(inputs, labels)
         # _,logp_target = f_net.target_distribution(V(labels))
         # loss = criterion(outputs, labels)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
+        running_mse += mse.item()
 
     writer.add_scalar('Loss', running_loss, epoch)
-    # for name, weight in f_net.named_parameters():
+    # for name, weight in model.named_parameters():
     #     # writer.add_histogram(name, weight, epoch)
     #     print(f'{name}', weight.grad)
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
-    print("Epoch: ", epoch, "Running loss: ", running_loss)
+    if epoch % 10 == 0:
+        print("Epoch: ", epoch, "Running loss: ", running_loss, "Running MSE: ", running_mse)
 # images, labels = next(iter(train_loader))
 # writer.add_graph(f_net, images)
 print('Finished Training')
