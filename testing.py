@@ -55,12 +55,19 @@ V = L.MakePSD(ICNN,n)
 
 # f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 # PATH_V = './saved_models/convex_V_stochastic_linear_V3.pth'
-PATH_f = './saved_models/convex_f_stochastic.pth'
+PATH_f = './saved_models/convex_f_nonConvex.pth'
+PATH_f = './saved_models/rootfind_f_nonConvex.pth'
+
 # V.load_state_dict(torch.load(PATH_V))
 # fhat.load_state_dict(torch.load(PATH_f))
 # f = stochastic_model_V3.MDN_module(fhat, V, n=n, k=k, is_training = False, show_mu = False)
 # f = stochastic_model.MDN_module(fhat, V, n=n, k=k, beta = beta, show_mu = False, is_training = False)
-f = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta, show_mu = True, is_training = False)
+# f = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta, show_mu = False, is_training = False)
+
+
+# f = model.dynamics_convex(V, n, beta = 0.99)
+f = rootfind_model.rootfind_module(V,n,is_training = True)
+
 
 # f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 
@@ -99,11 +106,14 @@ f.load_state_dict(torch.load(PATH_f))
 A = torch.tensor([[0.90, 1],[0, 0.90]])
 f_true = lambda x : F.linear(x, A, bias = False)
 
-plotting = vis.plot_dynamics(f,V,show_mu = True, is_stochastic = False)
+plotting = vis.plot_dynamics(f,V,show_mu = False, is_stochastic = False)
 plotting_true = vis.plot_dynamics(f_true, V)
 
 
-x0 = torch.tensor([[[-0.75, 3.15]]], dtype = torch.float)
+x0 = 5*torch.randn((1,1,2))
+x0 = torch.tensor([[[6,1]]], dtype = torch.float)
+# x0 = torch.tensor([[[1]]], dtype = torch.float)
+
 # x0 = torch.tensor([[[4, 2]]], dtype = torch.float)
 
 # x0 = torch.tensor([[[-0.75, 3.15]]], dtype = torch.float)
@@ -114,7 +124,7 @@ x0 = torch.tensor([[[-0.75, 3.15]]], dtype = torch.float)
 # VanderPol.gen_data(1)
 
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 5, "alpha": 1, "label": "Prediction"}
-X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = True, steps = 100, ax = plt)
+X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = True, steps = 200, ax = plt)
 # kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 5, "label": "True dynamics"}
 # X_true = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = plt)
 
@@ -123,7 +133,7 @@ kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 3, "label": "True d
 # X_true = np.loadtxt("./datasets/data_linear.csv", delimiter=",")
 # plt.plot(X_true[:, 0], X_true[:, 1],  **kwargs)
 
-X = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = True, steps = 100, ax = plt)
+# X = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = plt)
 
 
 

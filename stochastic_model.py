@@ -93,43 +93,23 @@ class stochastic_module(nn.Module):
         #   in V we make sure its mean is decreasing
 
         pi = self.pi(x)
-        # print(pi)
 
         mu_stable = self.mu_dynamics(x)
-        # print(mu_stable.shape, pi.probs.shape)
         var = self.var_dynamics(x)
         model_dist = MultivariateNormal(mu_stable, covariance_matrix = torch.diag_embed(var)) #Suboptimal a.s. but found to be more convenient/stable implementation
-
+        # print(pi.sample().shape)
         if self.is_training:
-            # logp_y = torch.exp((model_dist.log_prob(y).squeeze()))
             logp_y = (model_dist.log_prob(y).squeeze())
-            # logp_y = torch.sum((pi.probs.squeeze()*logp_y),-1)
-            # loss = -torch.mean(logp_y)
-            loss = torch.logsumexp(torch.log(pi.probs) + logp_y, dim=-1)
+            # print((torch.log(pi.probs).squeeze() + logp_y).shape)
+            loss = torch.logsumexp(torch.log(pi.probs).squeeze() + logp_y, dim=-1)
+
             return -torch.mean(loss)
         else:
-            # return mu_stable.view(-1,1,2)
             if self.show_mu:
-                # print(mu_stable)
-                # print(pi.probs.squeeze())
-                # print(pi.probs.view(self.k,1)*mu_stable)
-                # print(pi.probs.squeeze()[1]*mu_stable[0][1])
-                # print('hello')
                 mean = torch.sum(pi.probs.view(self.k,1)*mu_stable,1)
                 return mean
             else:
-                return fx
-
-        # if self.is_training:
-        #     logp_y = -(model_dist.log_prob(y).squeeze()).mean()
-        #     loss = logp_y
-        #     return loss
-        # else:
-        #     # return mu_stable.view(-1,1,2)
-        #     if self.show_mu:
-        #         return torch.stack([mu_stable, var]).squeeze()
-        #     else:
-        #         return fx
+                return torch.sum(pi.sample().view(self.k,1)*model_dist.sample(),1)
 
 class MDN_dynamics(nn.Module):
     def __init__(self,fhat,n,k, get_mu = True):
@@ -146,7 +126,7 @@ class MDN_dynamics(nn.Module):
             output = torch.stack(mu.split(mu.shape[-1] // self.k, 1)).view(-1,self.k,self.n)
         else:
             # output = torch.exp(torch.stack(var.split(var.shape[-1] // self.k, 1))).view(-1,self.k,self.n)
-            output = torch.clamp(torch.exp(torch.stack(var.split(var.shape[-1] // self.k, 1))).view(-1,self.k,self.n), min = 1e-15)
+            output = torch.clamp(torch.exp(torch.stack(var.split(var.shape[-1] // self.k, 1))).view(-1,self.k,self.n), min = 1e-10)
 
         return output
 #

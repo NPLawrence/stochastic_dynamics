@@ -68,8 +68,8 @@ class plot_dynamics(nn.Module):
         if show_ls:
 
 
-            x = np.arange(-5, 5.0, 0.1)
-            y = np.arange(-5, 5.0, 0.1)
+            x = np.arange(-5, 5.0, 0.05)
+            y = np.arange(-5, 5.0, 0.05)
             # x = np.arange(-3, 8, 0.1)
             # y = np.arange(-3, 8, 0.1)
             X, Y = np.meshgrid(x, y)

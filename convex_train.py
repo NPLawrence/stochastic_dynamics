@@ -18,25 +18,27 @@ from torch.utils.tensorboard import SummaryWriter
 torch.set_grad_enabled(True)
 
 import convex_model as model
+import rootfind_model
+
 import lyapunov_NN as L
 
 import generate_data
 
 # generate_data.data_linear(two_step = True, add_noise = False)
-lorenz = generate_data.data_Lorenz(two_step = False)
-lorenz.gen_data()
+# nonconvex = generate_data.data_nonConvex()
+# nonconvex.gen_data()
 # VanderPol = generate_data.data_VanderPol()
 # VanderPol.gen_data(1)
 
 epochs = 100
 batch_size = 512
-learning_rate = 0.005
+learning_rate = 0.0025
 n = 2
-add_state = True
+add_state = False
 
 # fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
 
-layer_sizes = np.array([n, 25, 25, 1])
+layer_sizes = np.array([n, 50, 50, 1])
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
 # layer_sizes = np.array([2, 50, 50, 50])
@@ -45,21 +47,24 @@ V = L.MakePSD(ICNN,n)
 # PATH_V = './saved_models/convex_V_VanderPol_stable.pth'
 # PATH_f = './saved_models/convex_f_VanderPol_stable.pth'
 # PATH_f = './saved_models/convex_f_linear_twostep.pth'
-PATH_f = './saved_models/convex_f_Lorenz.pth'
-PATH_V = './saved_models/convex_V_Lorenz.pth'
+PATH_f = './saved_models/convex_f_nonConvex.pth'
+# PATH_f = './saved_models/rootfind_f_nonConvex.pth'
 
+# PATH_V = './saved_models/convex_V_Lorenz.pth'
 
 # PATH_V = './saved_models/convex_V_Lorenz_stable.pth'
 # PATH_f = './saved_models/convex_f_Lorenz_stable.pth'
 # PATH_f = './saved_models/simple_f_Lorenz.pth'
 # PATH_f = './saved_models/simple_fICNN2.pth'
 
-f_net = model.dynamics_convex(V, n, beta = 0.99, add_state=add_state)
+f_net = model.dynamics_convex(V, n, beta = 0.99)
+# f_net = rootfind_model.rootfind_module(V,n,is_training = True)
+
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
 # data = pd.read_csv("./datasets/data_Lorenz_stable.csv")
-data = pd.read_csv("./datasets/data_linear.csv")
+data = pd.read_csv("./datasets/data_nonConvex.csv")
 
 # data = pd.read_csv("./datasets/data_Lorenz_stable_twostep.csv")
 # data = pd.read_csv("./datasets/data_linear_twostep.csv")
@@ -81,7 +86,7 @@ valid_dataset = generate_data.oversampdata(Valid_data,add_state = False,n = n)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_experiment_Lorenz_twostep')
+writer = SummaryWriter('runs/rootfind_experiment_nonConvex')
 
 # writer = SummaryWriter('runs/convex_experiment_linear_twostep')
 # writer = SummaryWriter('runs/convex_experiment_VanderPol_stable')
@@ -124,5 +129,5 @@ print('Finished Training')
 writer.close()
 
 # torch.save(ICNN.state_dict(), PATH_ICNN)
-torch.save(V.state_dict(), PATH_V)
+# torch.save(V.state_dict(), PATH_V)
 torch.save(f_net.state_dict(), PATH_f)

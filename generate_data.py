@@ -7,6 +7,8 @@ import control.matlab
 import torch
 from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
+from torch.distributions import Beta
+
 
 class data_linear():
     def __init__(self, two_step = False, add_noise = False):
@@ -57,6 +59,59 @@ class data_linear():
                 np.savetxt("./datasets/data_linear_noise.csv", data, delimiter=",")
             else:
                 np.savetxt("./datasets/data_linear.csv", data, delimiter=",")
+
+class data_nonConvex():
+    def __init__(self):
+
+        self.h = 0.1
+
+    def f(self, state):
+        x, y = np.squeeze(state)
+        return np.array([[y, -y - np.sin(x) - 2*np.clip(x+y,a_min = -1, a_max = 1)]])
+
+    def gen_data(self, trajectories=1):
+        data = []
+        # X = np.linspace(-5,5,num=15)
+        X = np.linspace(-10,10,num=15)
+        for x1 in X:
+            for x2 in X:
+                x = np.array([[x1,x2]])
+                for i in range(30):
+
+                    k1 = self.f(x)
+                    k2 = self.f(x + self.h*(k1/2))
+                    k3 = self.f(x + self.h*(k2/2))
+                    k4 = self.f(x + self.h*k3)
+                    x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+                    data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
+                    x = x_new
+
+        np.savetxt("./datasets/data_nonConvex.csv", data, delimiter=",")
+
+class data_beta():
+    def __init__(self):
+
+        data = []
+
+        X = np.linspace(-5,5,num=10)
+        # X = np.array([-3, 3])
+
+        for x1 in X:
+
+            x = np.array([[x1]])
+
+            for i in range(50):
+                A = Beta((torch.tensor(x)-5)**2, (torch.tensor(x)+5)**2).sample().numpy()
+                # print(A)
+
+                x_new = np.dot(x,A)
+
+                data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
+                x = x_new
+
+        np.savetxt("./datasets/data_beta.csv", data, delimiter=",")
+
+
 
 class data_Lorenz():
     def __init__(self, two_step = False):
@@ -140,22 +195,23 @@ class data_multiMod():
     def __init__(self, two_step = False):
 
         self.alpha = 0.5
-        self.beta = 25.0
-        self.gamma = 8.0
+        self.beta = 5.0
+        self.gamma = 1.0
 
-        self.h = 0.1
 
     def f(self, x, i):
-        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,0.1)
+        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,1)
+        # return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(x)) + np.random.normal(0,0.1)
 
     def f_mean(self, x, i):
         return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1))
+        # return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(x))
 
     def gen_data(self, trajectories = 1, steps = 200, train_data = True, x = None):
         data = []
         if train_data:
-            for j in range(1):
-                x = np.random.normal(0,0.1)
+            for j in range(10):
+                x = np.random.normal(0,2)
                 for i in range(steps):
                     x_new = self.f(x,i)
                     data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
@@ -178,6 +234,61 @@ class data_multiMod():
             return data, data_mean
 
 
+
+class data_doublePendulum():
+    def __init__(self, two_step = False):
+
+        # self.rho = 28.0
+        self.g = 10.0
+        self.l1 = 14
+        self.l2 = 14
+
+        self.beta = 8.0 / 3.0
+        self.h = 0.01
+
+        self.two_step = two_step
+
+    def f(self, state):
+        x, y, z = np.squeeze(state)
+        return np.array([[self.sigma*(y - x), x*(self.rho - z) - y, x*y - self.beta*z]])
+
+    def gen_data(self, trajectories=1):
+        steps = 2000
+        data = []
+        x = np.array([[1,1,1]])
+        if self.two_step:
+                k1 = self.f(x)
+                k2 = self.f(x + self.h*(k1/2))
+                k3 = self.f(x + self.h*(k2/2))
+                k4 = self.f(x + self.h*k3)
+                x_step = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+
+        for i in range(steps):
+
+            if self.two_step:
+                k1 = self.f(x_step)
+                k2 = self.f(x_step + self.h*(k1/2))
+                k3 = self.f(x_step + self.h*(k2/2))
+                k4 = self.f(x_step + self.h*k3)
+                x_new = x_step + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+                data.append(np.array((x,x_step,x_new)).reshape((1,9)).squeeze())
+                x = x_step
+                x_step = x_new
+
+            else:
+
+                k1 = self.f(x)
+                k2 = self.f(x + self.h*(k1/2))
+                k3 = self.f(x + self.h*(k2/2))
+                k4 = self.f(x + self.h*k3)
+                x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+                data.append(np.array((x,x_new)).reshape((1,6)).squeeze())
+                x = x_new
+
+        if self.two_step:
+            np.savetxt("./datasets/data_Lorenz_stable_twostep.csv", data, delimiter=",")
+        else:
+            np.savetxt("./datasets/data_Lorenz_stable.csv", data, delimiter=",")
 
 #see https://github.com/bhuvanakundumani/pytorch_Dataloader
 class oversampdata(Dataset):

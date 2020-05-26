@@ -14,6 +14,7 @@ import torch.optim as optim
 
 import convex_model as model
 import rootfind_model
+import stochastic_model
 import stochastic_model_V2
 
 import lyapunov_NN as L
@@ -32,21 +33,21 @@ import generate_data
 # ICNN = L.ICNN(layer_sizes)
 # V = L.MakePSD(ICNN,n)
 
-k = 3
+k = 4
 n = 1
 beta = 1
 mode = 1
-# fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
-#                     # nn.Linear(50, 50), nn.ReLU(),
-#                     nn.Linear(50, 50), nn.ReLU(),
-#                     nn.Linear(50, 2*n*k))
+fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
+                    # nn.Linear(50, 50), nn.ReLU(),
+                    nn.Linear(50, 50), nn.ReLU(),
+                    nn.Linear(50, 2*n*k))
 layer_sizes = np.array([n, 50, 50, 1])
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
 # ICNN_simple = L.ICNN(layer_sizes)
 # V_simple = L.MakePSD(ICNN_simple,n)
-f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
-f_simple = stochastic_model_V2.MixtureDensityNetwork(n, n, k)
+f = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta, show_mu = True, is_training = False)
+# f_simple = stochastic_model_V2.MixtureDensityNetwork(n, n, k)
 
 
 
@@ -64,8 +65,8 @@ f_simple = stochastic_model_V2.MixtureDensityNetwork(n, n, k)
 # PATH_V = './saved_models/convex_V_stochastic_multiMod.pth'
 # PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
 # PATH_V = './saved_models/convex_V_stochastic_multiMod_k2.pth'
-PATH_f = './saved_models/convex_f_stochastic_multiMod_k3.pth'
-PATH_f_simple = './saved_models/simple_f_stochastic_multiMod_k3.pth'
+PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
+# PATH_f_simple = './saved_models/simple_f_stochastic_multiMod_k3.pth'
 
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN.pth'
 # PATH_f_LowN = './saved_models/simple_f_stochastic_LowN.pth'
@@ -73,22 +74,22 @@ PATH_f_simple = './saved_models/simple_f_stochastic_multiMod_k3.pth'
 # fhat.load_state_dict(torch.load(PATH_f))
 # V.load_state_dict(torch.load(PATH_V))
 f.load_state_dict(torch.load(PATH_f))
-f_simple.load_state_dict(torch.load(PATH_f_simple))
+# f_simple.load_state_dict(torch.load(PATH_f_simple))
 # f_simple.load_state_dict(torch.load(PATH_f_simple))
 
 # f = stochastic_model.MDN_module(fhat, V, n=n, k=k, beta = beta, is_training = False, show_mu = False)
 # f_mu = stochastic_model.MDN_module(fhat, V, n=n, k=k, beta = beta, is_training = False, show_mu = True)
 
-plotting = vis.plot_dynamics(f,V,is_stochastic = True)
+# plotting = vis.plot_dynamics(f,V,is_stochastic = True)
 plotting_mu = vis.plot_dynamics(f,V,show_mu = True)
 
-plotting_simple = vis.plot_dynamics(f_simple,V,is_stochastic = True)
-plotting_simple_mu = vis.plot_dynamics(f_simple,V,show_mu = True)
+# plotting_simple = vis.plot_dynamics(f_simple,V,is_stochastic = True)
+# plotting_simple_mu = vis.plot_dynamics(f_simple,V,show_mu = True)
 
 
 
 
-x0 = torch.tensor([[[0.1]]], dtype = torch.float)
+x0 = torch.tensor([[[2]]], dtype = torch.float)
 
 
 
@@ -115,17 +116,17 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 # ax1 = fig.add_subplot(aspect=3)
 # ax1 = plt.subplot(111)
 
-steps = 100
+steps = 200
 multiMod = generate_data.data_multiMod()
 X_true, X_mean_true = multiMod.gen_data(1, steps = steps, train_data = False, x = x0.squeeze().numpy())
-X_true = np.loadtxt("./datasets/data_multiMod.csv", delimiter=",")
+# X_true = np.loadtxt("./datasets/data_multiMod.csv", delimiter=",")
 
 
 plt.subplot(1,2,1)
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 2, "label": "Predicted mean"}
-# X_mu = plotting_mu.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
+X_mu = plotting_mu.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 0.5, "alpha": 0.40, "label": "Stable prediction"}
-X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
+# X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
 
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 0.5, "label": "True dynamics"}
 # plt.plot(np.linspace(0,len(X_true)-1, len(X_true)), X_true, **kwargs)
@@ -141,7 +142,7 @@ plt.subplot(1,2,2)
 kwargs = {"color" : "tab:red", "marker": ".", "markersize": 2, "label": "Simple mean"}
 # X_mu_simple = plotting_simple_mu.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
 kwargs = {"color" : "tab:red", "marker": ".", "markersize": 0.5, "alpha": 0.40, "label": "Simple model"}
-X_simple = plotting_simple.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
+# X_simple = plotting_simple.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, ax = plt)
 
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 0.5, "label": "True dynamics"}
 plt.plot(np.linspace(0,len(X_true)-1, len(X_true)), X_true, **kwargs)

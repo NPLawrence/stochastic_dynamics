@@ -24,18 +24,19 @@ import lyapunov_NN as L
 
 import generate_data
 
-generate_data.data_linear(add_noise = False)
+generate_data.data_beta()
+# generate_data.data_linear(add_noise = True)
 # multiMod = generate_data.data_multiMod()
 # multiMod.gen_data()
 
-epochs = 200
+epochs = 100
 batch_size = 512
 learning_rate = 0.005
 
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 k = 2
-n = 2
+n = 1
 beta = 0.99
 mode = 1
 fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
@@ -50,11 +51,13 @@ V = L.MakePSD(ICNN,n)
 # PATH_V = './saved_models/simple_V_stochastic_noisyData.pth'
 # PATH_f = './saved_models/simple_f_stochastic_noisyData.pth'
 # PATH_V = './saved_models/simple_V_stochastic.pth'
-PATH_f = './saved_models/convex_f_stochastic.pth'
+# PATH_f = './saved_models/convex_f_stochastic.pth'
 # PATH_V = './saved_models/rootfind_V_stochastic.pth'
 # PATH_f = './saved_models/rootfind_f_stochastic.pth'
 # PATH_V = './saved_models/convex_V_stochastic_multiMod.pth'
 # PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
+PATH_f = './saved_models/convex_f_stochastic_beta.pth'
+
 # PATH_V = './saved_models/convex_V_stochastic_linear_V3.pth'
 # PATH_f = './saved_models/convex_f_stochastic_linear_V3.pth'
 # torch.save(f_net.state_dict(), PATH)
@@ -66,7 +69,8 @@ f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = 
 
 # f_net = fhat
 
-data = pd.read_csv("./datasets/data_linear.csv")
+data = pd.read_csv("./datasets/data_beta.csv")
+# data = pd.read_csv("./datasets/data_linear.csv")
 # data = pd.read_csv("./datasets/data_linear_noise.csv")
 # data = pd.read_csv("./datasets/data_multiMod.csv")
 
@@ -84,9 +88,11 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
+writer = SummaryWriter('runs/convex_stochastic_beta')
+
 # writer = SummaryWriter('runs/convex_multiMod_experiment')
 # writer = SummaryWriter('runs/stochastic_experiment_rootfind')
-writer = SummaryWriter('runs/stochastic_experiment_linear')
+# writer = SummaryWriter('runs/stochastic_experiment_linear')
 # writer = SummaryWriter('runs/stochastic_experiment_linear_noisyData')
 
 

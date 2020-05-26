@@ -35,11 +35,18 @@ class rootfind_module(nn.Module):
     #This is where we bring together:
     #   1. The Newton iteration function (newton_iter)
     #   2. The custom autograd function for backprop though Newton's method (rootfind_train)
-    def __init__(self, fhat, V, is_training = False, beta = 0.99):
+    def __init__(self, V, n, is_training = False, beta = 0.99, f = None):
         super().__init__()
 
+        if f is None:
+            self.fhat =  nn.Sequential(nn.Linear(2, 25), nn.ReLU(),
+                                        nn.Linear(25, 25), nn.ReLU(),
+                                        nn.Linear(25, 25), nn.ReLU(),
+                                        nn.Linear(25, 2))
+        else:
+            self.fhat = f
+
         self.V = V
-        self.fhat = fhat
         self.beta = beta
         self.is_training = is_training
 

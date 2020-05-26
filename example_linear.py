@@ -91,7 +91,7 @@ plotting_rf_noise_mu = vis.plot_dynamics(f_rf_noise_mu,V_rf_noise)
     # x0 = 4*torch.randn([1,2], dtype = torch.float)
 # fig = figsize=(10,3)
 fig, (ax1, ax2, ax3) = plt.subplots(1,3, figsize=(14,4), sharey=False, constrained_layout=False)
-plt.subplots_adjust(wspace = 0.314)
+plt.subplots_adjust(wspace = 0.2718)
 SMALL_SIZE = 8
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16

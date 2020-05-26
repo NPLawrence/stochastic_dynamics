@@ -52,14 +52,14 @@ class fhat(nn.Module):
 
 class dynamics_convex(nn.Module):
     #Modifies fhat via a simple scaling rule, exploiting convexity
-    def __init__(self, V, n, beta = 0.99, add_state = False, fhat = None):
+    def __init__(self, V, n, beta = 0.99, add_state = False, f = None):
         super().__init__()
 
         # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
         #                     nn.Linear(50, 50), nn.ReLU(),
         #                     nn.Linear(50, 50), nn.ReLU(),
         #                     nn.Linear(50, 2))
-        if fhat is None:
+        if f is None:
             self.fhat = fhat(np.array([n, 25, 25, 25, n]), False)
         else:
             self.fhat = fhat
