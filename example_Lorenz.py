@@ -25,18 +25,23 @@ k = 1
 n = 3
 beta = 1
 mode = 1
-add_state = True
 
-f_simple = model.fhat(np.array([n, 25, 25, 25, n]), True)
-fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
+Lorenz = generate_data.data_Lorenz()
+Lorenz.gen_data(1)
+
+f_simple = model.fhat(np.array([n, 25, 25, 25, n]), add_state = True)
+# fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
 layer_sizes = np.array([n, 25, 25, 1])
+layer_sizes = np.array([n, 50, 50, 1])
+
 # layer_sizes = np.array([n, 50, 50, 1])
 
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
 
-f = model.dynamics_convex(V, n, beta = 0.99, add_state = add_state)
+# f = model.dynamics_convex(V, n, beta = 0.99, add_state = add_state)
 
+f = model.dynamics_nonincrease(V, n)
 # f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 
 
@@ -56,7 +61,10 @@ f = model.dynamics_convex(V, n, beta = 0.99, add_state = add_state)
 # PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
 
 # PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
-PATH_f = './saved_models/convex_f_Lorenz.pth'
+PATH_f = './saved_models/noninc_f_Lorenz.pth'
+PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
+
+# PATH_f = './saved_models/convex_f_Lorenz.pth'
 
 
 
@@ -66,6 +74,8 @@ PATH_f = './saved_models/convex_f_Lorenz.pth'
 # fhat.load_state_dict(torch.load(PATH_f))
 # f = model.dynamics_convex(fhat,V,add_state)
 f.load_state_dict(torch.load(PATH_f))
+f_simple.load_state_dict(torch.load(PATH_f_simple))
+
 
 # f_simple.load_state_dict(torch.load(PATH_f_simple))
 
@@ -81,13 +91,13 @@ f.load_state_dict(torch.load(PATH_f))
 
 
 
-x0 = torch.tensor([[[1,1,1]]], dtype = torch.float)
+x0 = torch.tensor([[[1+.2,1,1]]], dtype = torch.float)
 
 lorenz = generate_data.data_Lorenz()
 lorenz.gen_data(1)
 
 plotting = vis.plot_dynamics_3D(f,V,show_mu = False, is_stochastic = False)
-# plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
+plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
 
 # plotting = vis.plot_dynamics_3D(f,V)
 # plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
@@ -124,39 +134,44 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 # print(spec[1,0])
 
 # ax1 = fig.add_subplot(aspect=3)
-# ax1 = plt.subplot(111)
+# ax1 = plt.subplot(121)
 
 kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
-# X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
+# X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 1000)
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
-X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 2000)
+X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 1000)
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
 X_true = np.loadtxt("./datasets/data_Lorenz_stable.csv", delimiter=",")
 plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
 
 # ax1.set_ylim([-1, 6])
-plt.legend()
+# ax1.legend()
 # handles,labels = ax1.get_legend_handles_labels()
 # handles = [handles[1], handles[2], handles[0]]
 # labels = [labels[1], labels[2], labels[0]]
 # ax1.legend(handles,labels,loc=1)
-plt.title('Deterministic')
+# plt.title('Deterministic')
 #
+fig = plt.figure(2)
 # ax2 = plt.subplot(122)
 # # ax2 = fig.add_subplot(aspect=3)
 # plt.yticks([])
-# kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 5, "alpha": 0.30, "label": "Prediction"}
-# X = plotting_noise.plot_trajectory(x0, kwargs, sample_paths = 8, show_ls = True, steps = 100, ax = ax2)
+# fig = plt.figure(2)
+fig.gca(projection='3d')
+kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
+X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 1000)
 # kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 5, "label": "True mean"}
 # X_true = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = ax2)
-# kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Predicted mean"}
-# X_mu = plotting_noise_mu.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, show_mu = True, steps = 100, ax = ax2)
+kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
+X_true = np.loadtxt("./datasets/data_Lorenz_stable.csv", delimiter=",")
+plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
 # ax2.set_ylim([-1, 6])
 # ax2.legend()
 # handles,labels = ax2.get_legend_handles_labels()
 # handles = [handles[1], handles[2], handles[0]]
 # labels = [labels[1], labels[2], labels[0]]
 # ax2.legend(handles,labels,loc=1)
+# ax2.legend(loc=1)
 # ax2.set_title("Noisy training data")
 
 
@@ -166,7 +181,7 @@ plt.savefig('figures/example_2_convex.png', dpi=400, bbox_inches='tight',pad_inc
 plt.show()
 
 
-fig = plt.figure(2)
+fig = plt.figure(3)
 
 kwargs_nominal = {"color" : "tab:red", "marker": ".", "markersize": 3, "label": "Nominal prediction"}
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}

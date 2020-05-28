@@ -88,6 +88,75 @@ class data_nonConvex():
 
         np.savetxt("./datasets/data_nonConvex.csv", data, delimiter=",")
 
+class data_stochasticNonlinear():
+    def __init__(self):
+
+        self.h = 0.1
+
+    def f(self, state):
+        x, y = np.squeeze(state)
+        f1 = -x*(1/(np.sqrt(np.linalg.norm(state,2)))) - x + y
+        g1 = np.sin(x)
+        f2 = -y*(1/(np.sqrt(np.linalg.norm(state,2)))) - (10/3)*y + x
+        g2 = y
+        a = np.array([[f1, f2]])
+        b = np.array([[g1, g2]])
+        return a, b
+
+    def gen_data(self, x0=None):
+
+        h = self.h
+        data = []
+
+        if x0 is None:
+
+            # X = np.linspace(-5,5,num=15)
+            X = np.linspace(-5,5,num=14)
+            # x = 2*np.random.randn(1,2)
+
+            for x1 in X:
+                for x2 in X:
+                    x = np.array([[x1,x2]])
+                    for i in range(200):
+
+                        Z_t, S_t = np.random.normal(0,1), np.random.choice([-1,1])
+                        W_t = np.sqrt(h)*Z_t
+
+                        a1, b1 = self.f(x)
+                        k1 = h*a1 + (W_t - np.sqrt(h)*S_t)*b1
+
+                        a2, b2 = self.f(x + k1)
+                        k2 = h*a2 + (W_t + np.sqrt(h)*S_t)*b2
+
+                        x_new = x + (h/2)*(k1 + k2)
+                        data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
+                        x = x_new
+
+            np.savetxt("./datasets/data_stochasticNonlinear.csv", data, delimiter=",")
+
+        else:
+
+            x = np.array(x0.view(1,-1).numpy())
+
+            for i in range(200):
+
+                Z_t, S_t = np.random.normal(0,1), np.random.choice([-1,1])
+                W_t = np.sqrt(h)*Z_t
+
+                a1, b1 = self.f(x)
+                k1 = h*a1 + (W_t - np.sqrt(h)*S_t)*b1
+
+                a2, b2 = self.f(x + k1)
+                k2 = h*a2 + (W_t + np.sqrt(h)*S_t)*b2
+
+                x_new = x + (h/2)*(k1 + k2)
+                data.append(np.array((x_new)).reshape((1,2)).squeeze())
+                x = x_new
+
+            return np.array([data]).squeeze()
+
+
+
 class data_beta():
     def __init__(self):
 
@@ -233,62 +302,6 @@ class data_multiMod():
                 x_mean = x_mean_new
             return data, data_mean
 
-
-
-class data_doublePendulum():
-    def __init__(self, two_step = False):
-
-        # self.rho = 28.0
-        self.g = 10.0
-        self.l1 = 14
-        self.l2 = 14
-
-        self.beta = 8.0 / 3.0
-        self.h = 0.01
-
-        self.two_step = two_step
-
-    def f(self, state):
-        x, y, z = np.squeeze(state)
-        return np.array([[self.sigma*(y - x), x*(self.rho - z) - y, x*y - self.beta*z]])
-
-    def gen_data(self, trajectories=1):
-        steps = 2000
-        data = []
-        x = np.array([[1,1,1]])
-        if self.two_step:
-                k1 = self.f(x)
-                k2 = self.f(x + self.h*(k1/2))
-                k3 = self.f(x + self.h*(k2/2))
-                k4 = self.f(x + self.h*k3)
-                x_step = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
-
-        for i in range(steps):
-
-            if self.two_step:
-                k1 = self.f(x_step)
-                k2 = self.f(x_step + self.h*(k1/2))
-                k3 = self.f(x_step + self.h*(k2/2))
-                k4 = self.f(x_step + self.h*k3)
-                x_new = x_step + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
-                data.append(np.array((x,x_step,x_new)).reshape((1,9)).squeeze())
-                x = x_step
-                x_step = x_new
-
-            else:
-
-                k1 = self.f(x)
-                k2 = self.f(x + self.h*(k1/2))
-                k3 = self.f(x + self.h*(k2/2))
-                k4 = self.f(x + self.h*k3)
-                x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
-                data.append(np.array((x,x_new)).reshape((1,6)).squeeze())
-                x = x_new
-
-        if self.two_step:
-            np.savetxt("./datasets/data_Lorenz_stable_twostep.csv", data, delimiter=",")
-        else:
-            np.savetxt("./datasets/data_Lorenz_stable.csv", data, delimiter=",")
 
 #see https://github.com/bhuvanakundumani/pytorch_Dataloader
 class oversampdata(Dataset):

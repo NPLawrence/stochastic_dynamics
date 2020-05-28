@@ -62,7 +62,7 @@ class dynamics_convex(nn.Module):
         if f is None:
             self.fhat = fhat(np.array([n, 25, 25, 25, n]), False)
         else:
-            self.fhat = fhat
+            self.fhat = f
         self.V = V
         self.beta = beta
         self.add_state = add_state
@@ -179,28 +179,30 @@ class dynamics_convex(nn.Module):
 class dynamics_nonincrease(nn.Module):
     #Modifies fhat by ensuring 'non-expansiveness'
     #i.e. it never moves in a direction that is acute with the gradient of V at x_k
-    def __init__(self, fhat, V):
+    def __init__(self, V, n, f = None):
         super().__init__()
 
+        if f is None:
+            self.fhat = fhat(np.array([n, 25, 25, 25, n]), False)
+        else:
+            self.fhat = f
 
-
-        self.fhat = fhat
         self.V = V
 
     def forward(self, x):
 
         x = x.requires_grad_(True)
         fhatx = self.fhat(x)
-        fhatx.requires_grad_(True)
+        # fhatx.requires_grad_(True)
         Vx = self.V(x)
         # print(Vx.backward(torch.ones_like(Vx)))
         # gV = torch.autograd.grad([a for a in Vx], [x], create_graph=True, only_inputs=True)[0]
         with torch.enable_grad():
-            gV = torch.autograd.grad(Vx, x, create_graph=True, only_inputs=True, grad_outputs=torch.ones_like(Vx))[0]
+            gV = torch.autograd.grad(Vx, x, retain_graph = True, only_inputs=True, grad_outputs=torch.ones_like(Vx))[0]
         # fx = fhatx - F.relu((gV*(fhatx - x)).sum(dim = -1))*gV/(gV**2).sum(dim=1)[:,None]
 
         # print(gV.requires_grad)
-        fx = self.fhat(x) - F.relu((gV*(self.fhat(x) - x)).sum(dim = -1, keepdim = True))*gV/(torch.norm(gV, dim = -1, keepdim = True)**2)
+        fx = x + self.fhat(x) - F.relu((gV*(self.fhat(x) - x)).sum(dim = -1, keepdim = True))*gV/(torch.norm(gV, dim = -1, keepdim = True)**2)
 
         # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
         return fx

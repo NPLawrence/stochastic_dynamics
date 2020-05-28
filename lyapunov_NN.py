@@ -39,7 +39,7 @@ class ReHU(nn.Module):
 #         return smoothed_output + quadratic_under
 
 class MakePSD(nn.Module):
-    def __init__(self, f, n, eps=0.01, d=1.0):
+    def __init__(self, f, n, eps=0.1, d=1.0):
         super().__init__()
         self.f = f
 

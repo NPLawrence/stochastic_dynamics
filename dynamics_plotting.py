@@ -39,6 +39,7 @@ class plot_dynamics(nn.Module):
             with torch.no_grad():
 
                 if self.show_mu:
+
                     mu = self.f(mu)
 
 
@@ -52,7 +53,7 @@ class plot_dynamics(nn.Module):
 
                 else:
                     if self.is_stochastic:
-                        x = self.f.sample(x)
+                        x = self.f(x)
                     else:
                         x = self.f(x)
 
@@ -200,30 +201,30 @@ class plot_dynamics_3D(nn.Module):
             X = torch.empty([steps, x.shape[-1]])
             X[0,:] = x.squeeze()
 
-        with torch.no_grad():
+        # with torch.no_grad():
 
-            for i in range(steps-1):
-                if self.show_mu:
+        for i in range(steps-1):
+            if self.show_mu:
 
 
-                    pi, normal = self.f(mu)
+                pi, normal = self.f(mu)
 
-                    # print(pi.probs.view(-1,1)*normal.loc)
-                    # print(torch.sum(pi.probs.view(-1,1)*normal.loc,1))
-                    mu = torch.sum(pi.probs.view(-1,1)*normal.loc,1).view(-1,1,x0.shape[-1])
-                    # mu = torch.sum(pi*normal.loc,1)
-                    # print(mu)
-                    # mu = y[0].unsqueeze(dim = 0)
-                    # mu = y[0].view(-1,1,mu.shape[-1])
-                    # var = y[1]
-                    X[i+1,:] = mu
+                # print(pi.probs.view(-1,1)*normal.loc)
+                # print(torch.sum(pi.probs.view(-1,1)*normal.loc,1))
+                mu = torch.sum(pi.probs.view(-1,1)*normal.loc,1).view(-1,1,x0.shape[-1])
+                # mu = torch.sum(pi*normal.loc,1)
+                # print(mu)
+                # mu = y[0].unsqueeze(dim = 0)
+                # mu = y[0].view(-1,1,mu.shape[-1])
+                # var = y[1]
+                X[i+1,:] = mu
 
+            else:
+                if self.is_stochastic:
+                    x = self.f.sample(x)
                 else:
-                    if self.is_stochastic:
-                        x = self.f.sample(x)
-                    else:
-                        x = self.f(x)
-                    X[i+1,:] = x
+                    x = self.f(x)
+                X[i+1,:] = x
 
         return X.detach().numpy()
 

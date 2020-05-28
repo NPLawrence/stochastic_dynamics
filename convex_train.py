@@ -27,16 +27,16 @@ import generate_data
 # generate_data.data_linear(two_step = True, add_noise = False)
 # nonconvex = generate_data.data_nonConvex()
 # nonconvex.gen_data()
-# VanderPol = generate_data.data_VanderPol()
-# VanderPol.gen_data(1)
+Lorenz = generate_data.data_Lorenz()
+Lorenz.gen_data(1)
 
-epochs = 100
+epochs = 500
 batch_size = 512
-learning_rate = 0.0025
-n = 2
+learning_rate = 0.005
+n = 3
 add_state = False
 
-# fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
+fhat = model.fhat(np.array([n, 25, 25, 25, n]), add_state = True)
 
 layer_sizes = np.array([n, 50, 50, 1])
 ICNN = L.ICNN(layer_sizes)
@@ -47,7 +47,9 @@ V = L.MakePSD(ICNN,n)
 # PATH_V = './saved_models/convex_V_VanderPol_stable.pth'
 # PATH_f = './saved_models/convex_f_VanderPol_stable.pth'
 # PATH_f = './saved_models/convex_f_linear_twostep.pth'
-PATH_f = './saved_models/convex_f_nonConvex.pth'
+# PATH_f = './saved_models/convex_f_nonConvex.pth'
+PATH_f = './saved_models/convex_f_Lorenz_unstable.pth'
+
 # PATH_f = './saved_models/rootfind_f_nonConvex.pth'
 
 # PATH_V = './saved_models/convex_V_Lorenz.pth'
@@ -57,14 +59,17 @@ PATH_f = './saved_models/convex_f_nonConvex.pth'
 # PATH_f = './saved_models/simple_f_Lorenz.pth'
 # PATH_f = './saved_models/simple_fICNN2.pth'
 
-f_net = model.dynamics_convex(V, n, beta = 0.99)
+# f_net = model.dynamics_convex(V, n, beta = 0.99)
+f_net = model.dynamics_nonincrease(V, n)
+# f_net = fhat
+
 # f_net = rootfind_model.rootfind_module(V,n,is_training = True)
 
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
-# data = pd.read_csv("./datasets/data_Lorenz_stable.csv")
-data = pd.read_csv("./datasets/data_nonConvex.csv")
+data = pd.read_csv("./datasets/data_Lorenz.csv")
+# data = pd.read_csv("./datasets/data_nonConvex.csv")
 
 # data = pd.read_csv("./datasets/data_Lorenz_stable_twostep.csv")
 # data = pd.read_csv("./datasets/data_linear_twostep.csv")
@@ -86,7 +91,11 @@ valid_dataset = generate_data.oversampdata(Valid_data,add_state = False,n = n)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/rootfind_experiment_nonConvex')
+# writer = SummaryWriter('runs/simple_experiment_Lorenz_unstable')
+
+writer = SummaryWriter('runs/noninc_experiment_Lorenz_unstable')
+
+# writer = SummaryWriter('runs/rootfind_experiment_nonConvex')
 
 # writer = SummaryWriter('runs/convex_experiment_linear_twostep')
 # writer = SummaryWriter('runs/convex_experiment_VanderPol_stable')

@@ -33,7 +33,7 @@ add_state = True
 # PATH_f = './saved_models/rootfind_f.pth'
 
 #convex default
-k = 2
+k = 4
 n = 2
 beta = 0.99
 mode = 1
@@ -56,7 +56,7 @@ V = L.MakePSD(ICNN,n)
 # f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
 # PATH_V = './saved_models/convex_V_stochastic_linear_V3.pth'
 PATH_f = './saved_models/convex_f_nonConvex.pth'
-PATH_f = './saved_models/rootfind_f_nonConvex.pth'
+PATH_f = './saved_models/convex_f_stochastic_nonLinear.pth'
 
 # V.load_state_dict(torch.load(PATH_V))
 # fhat.load_state_dict(torch.load(PATH_f))
@@ -66,7 +66,9 @@ PATH_f = './saved_models/rootfind_f_nonConvex.pth'
 
 
 # f = model.dynamics_convex(V, n, beta = 0.99)
-f = rootfind_model.rootfind_module(V,n,is_training = True)
+# f = rootfind_model.rootfind_module(V,n,is_training = True)
+f = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, show_mu = False, is_training = False, mode = mode, beta = beta)
+
 
 
 # f = stochastic_model_V2.MixtureDensityNetwork(n, n, k, V, mode = mode)
@@ -89,9 +91,6 @@ f = rootfind_model.rootfind_module(V,n,is_training = True)
 
 f.load_state_dict(torch.load(PATH_f))
 
-
-
-
 # PATH_ICNN = './saved_models/rootfind_ICNN.pth'
 
 # PATH_V_LowN = './saved_models/simple_V_stochastic_LowN.pth'
@@ -106,12 +105,13 @@ f.load_state_dict(torch.load(PATH_f))
 A = torch.tensor([[0.90, 1],[0, 0.90]])
 f_true = lambda x : F.linear(x, A, bias = False)
 
-plotting = vis.plot_dynamics(f,V,show_mu = False, is_stochastic = False)
+plotting = vis.plot_dynamics(f,V,show_mu = False, is_stochastic = True)
 plotting_true = vis.plot_dynamics(f_true, V)
 
 
-x0 = 5*torch.randn((1,1,2))
-x0 = torch.tensor([[[6,1]]], dtype = torch.float)
+x0 = 4*torch.randn((1,1,2)) + 1
+# print(x0)
+# x0 = torch.tensor([[[-3.5,-5.5]]], dtype = torch.float)
 # x0 = torch.tensor([[[1]]], dtype = torch.float)
 
 # x0 = torch.tensor([[[4, 2]]], dtype = torch.float)
@@ -120,18 +120,17 @@ x0 = torch.tensor([[[6,1]]], dtype = torch.float)
 
 # A = torch.tensor([[0.90, 1],[0, 0.90]])
 
-# VanderPol = generate_data.data_VanderPol()
-# VanderPol.gen_data(1)
-
-kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 5, "alpha": 1, "label": "Prediction"}
+sample_trajectory = generate_data.data_stochasticNonlinear()
+X_true = sample_trajectory.gen_data(x0)
+# print(X_true)
+kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "alpha": 1, "label": "Prediction"}
 X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = True, steps = 200, ax = plt)
 # kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 5, "label": "True dynamics"}
 # X_true = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = plt)
 
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 3, "label": "True dynamics"}
-# X_true = np.loadtxt("./datasets/data_VanderPol_stable.csv", delimiter=",")
 # X_true = np.loadtxt("./datasets/data_linear.csv", delimiter=",")
-# plt.plot(X_true[:, 0], X_true[:, 1],  **kwargs)
+plt.plot(X_true[:, 0], X_true[:, 1],  **kwargs)
 
 # X = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = plt)
 
