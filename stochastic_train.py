@@ -26,8 +26,8 @@ import generate_data
 
 # generate_data.data_beta()
 # generate_data.data_linear(add_noise = True)
-stoch_nonLinear = generate_data.data_stochasticNonlinear()
-stoch_nonLinear.gen_data()
+# stoch_nonLinear = generate_data.data_stochasticNonlinear()
+# stoch_nonLinear.gen_data()
 
 epochs = 200
 batch_size = 512
@@ -35,15 +35,15 @@ learning_rate = 0.0025
 
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
-k = 4
+k = 6
 n = 2
 beta = 0.99
 mode = 1
-fhat = nn.Sequential(nn.Linear(n, 50), nn.ReLU(),
+fhat = nn.Sequential(nn.Linear(n, 25), nn.ReLU(),
                     # nn.Linear(50, 50), nn.ReLU(),
-                    nn.Linear(50, 50), nn.ReLU(),
-                    nn.Linear(50, 2*n*k))
-layer_sizes = np.array([n, 50, 50, 1])
+                    nn.Linear(25, 25), nn.ReLU(),
+                    nn.Linear(25, 2*n*k))
+layer_sizes = np.array([n, 25, 25, 1])
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
 # f_net = model.dynamics_simple(fhat,V)
@@ -56,7 +56,12 @@ V = L.MakePSD(ICNN,n)
 # PATH_f = './saved_models/rootfind_f_stochastic.pth'
 # PATH_V = './saved_models/convex_V_stochastic_multiMod.pth'
 # PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
-PATH_f = './saved_models/convex_f_stochastic_nonLinear.pth'
+
+PATH_f = './saved_models/convex_f_stochastic_nonLinear2.pth'
+# PATH_f = './saved_models/simple_f_stochastic_nonLinear2.pth'
+# PATH_f = './saved_models/rootfind_f_stochastic_nonLinear.pth'
+
+
 
 # PATH_V = './saved_models/convex_V_stochastic_linear_V3.pth'
 # PATH_f = './saved_models/convex_f_stochastic_linear_V3.pth'
@@ -65,7 +70,8 @@ PATH_f = './saved_models/convex_f_stochastic_nonLinear.pth'
 # f_net = model.dynamics_simple(fhat,V)
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = stochastic_model.stochastic_module(fhat, V, k)
-f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta)
+
+f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = 1, beta = beta)
 
 # f_net = fhat
 
@@ -88,7 +94,11 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_stochastic_nonLinear')
+writer = SummaryWriter('runs/convex_stochastic_nonLinear2')
+# writer = SummaryWriter('runs/simple_stochastic_nonLinear2')
+# writer = SummaryWriter('runs/rootfind_stochastic_nonLinear')
+
+
 
 # writer = SummaryWriter('runs/convex_multiMod_experiment')
 # writer = SummaryWriter('runs/stochastic_experiment_rootfind')
@@ -122,6 +132,7 @@ for epoch in range(epochs):
         loss = logp_labels
         # _,logp_target = f_net.target_distribution(V(labels))
         # loss = criterion(outputs, labels)
+
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
@@ -129,7 +140,6 @@ for epoch in range(epochs):
     writer.add_scalar('Loss', running_loss, epoch)
     # for name, weight in f_net.named_parameters():
     #     # writer.add_histogram(name, weight, epoch)
-    #     print(f'{name}', weight.grad)
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
 
     if epoch % 10 == 0:

@@ -175,12 +175,10 @@ plt.title('Simple model')
 # ax2.set_title("Noisy training data")
 
 
-plt.savefig('figures/example_3_convex.eps', dpi=400, bbox_inches='tight',pad_inches=.01, metadata='eps')
-plt.savefig('figures/example_3_convex.png', dpi=400, bbox_inches='tight',pad_inches=.01)
+plt.savefig('figures/example_3_stochasticNonlinear.eps', dpi=400, bbox_inches='tight',pad_inches=.01, metadata='eps')
+plt.savefig('figures/example_3_stochasticNonlinear.png', dpi=400, bbox_inches='tight',pad_inches=.01)
 # plt.tight_layout()
 plt.show()
-
-
 
 
 plt.show()

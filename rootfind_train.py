@@ -52,8 +52,8 @@ V = L.MakePSD(ICNN,2)
 f_net = model.rootfind_module(fhat,V,is_training = True)
 
 # PATH_ICNN = './saved_models/rootfind_ICNN.pth'
-PATH_V = './saved_models/rootfind_V.pth'
-PATH_f = './saved_models/rootfind_f.pth'
+PATH_V = './saved_models/rootfind_V1.pth'
+PATH_f = './saved_models/rootfind_f1.pth'
 
 # f_net = fhat
 
@@ -72,7 +72,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
-writer = SummaryWriter('runs/linear_experiment_rootfind')
+writer = SummaryWriter('runs/linear_experiment_rootfind1')
 
 criterion = nn.MSELoss()
 

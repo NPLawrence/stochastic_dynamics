@@ -11,14 +11,14 @@ import torch.optim as optim
 
 class ReHU(nn.Module):
     """ Rectified Huber unit"""
-    def __init__(self, d):
+    def __init__(self, d = 1):
         super().__init__()
         self.a = 1/(2*d)
-        self.b = -d/2
+        self.b = d/2
 
     def forward(self, x):
 
-        return torch.max(torch.clamp(torch.sign(x)*(self.a)*x**2,min=0,max=-self.b),x+self.b)
+        return torch.max(torch.clamp((self.a)*x**2,min=0,max=self.b),x-self.b)
 
 # class MakePSD(nn.Module):
 #     def __init__(self, f, n, eps=0.01, d=0.1):
@@ -39,20 +39,30 @@ class ReHU(nn.Module):
 #         return smoothed_output + quadratic_under
 
 class MakePSD(nn.Module):
-    def __init__(self, f, n, eps=0.1, d=1.0):
+    def __init__(self, f, n, eps=0.01, d=1.0, make_nonConvex = False):
         super().__init__()
         self.f = f
 
         self.eps = eps
         self.d = d
         self.n = n
-        # self.rehu = ReHU.apply
+        self.make_nonConvex = make_nonConvex
+        if self.make_nonConvex:
+            self.a = nn.Parameter(torch.tensor(0.0), requires_grad = False)
         self.rehu = ReHU(self.d)
+
 
     def forward(self, x):
 
-        zero = self.f(torch.zeros((1,1,x.shape[-1])))
-        smoothed_output = self.rehu(self.f(x) - zero)
+
+        if self.make_nonConvex:
+            zero = self.f((1-torch.sigmoid(self.a))*F.softplus(torch.zeros((1,1,x.shape[-1]))))
+            # zero = self.f(F.tanhshrink(torch.zeros((1,1,x.shape[-1]))))
+            a = torch.sigmoid(self.a)
+            smoothed_output = self.rehu(self.f(a*x + (1-a)*F.softplus(x))- zero)
+        else:
+            zero = self.f(torch.zeros((1,1,x.shape[-1])))
+            smoothed_output = self.rehu(self.f(x) - zero)
 
         quadratic_under = self.eps*(torch.norm(x, dim = -1, keepdim = True)**2)
 
@@ -131,7 +141,7 @@ class ICNN_2(nn.Module):
 #For simplicty, this version assumes all hidden dimensions are the same
 #(Original implementation ensures hidden dimensions are nondecreasing)
 class Lyapunov_NN(nn.Module):
-    def __init__(self, f, quadratic_under = True, epsilon = 0.1):
+    def __init__(self, f, quadratic_under = True, epsilon = 0.01):
         super().__init__()
 
         self.f = f
@@ -147,32 +157,75 @@ class Lyapunov_NN(nn.Module):
 
 #Feedforward NN with positive definite weights
 class PD_weights(nn.Module):
-    def __init__(self, layer_sizes, activation=F.gelu, epsilon = 1e-6):
+    def __init__(self, layer_sizes, activation=F.relu, epsilon = 1e-6, make_convex = True):
         super().__init__()
 
-        self.G = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
-                                   for l in layer_sizes[1:]])
+        self.make_convex = make_convex
+
+        self.G = nn.ParameterList([nn.Parameter(torch.Tensor(np.int(np.ceil((layer_sizes[i]+1)/2)), layer_sizes[i]))
+                                   for i in range(0,len(layer_sizes)-1)])
+        self.G_2 = nn.Parameter(torch.Tensor(layer_sizes[1] - layer_sizes[0], layer_sizes[0]))
+
+
+        if self.make_convex:
+            self.G_conv = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
+                                       for l in layer_sizes[1:]])
+
+        self.I_input = nn.Parameter(torch.eye(layer_sizes[0]), requires_grad = False)
         self.I = nn.Parameter(torch.eye(layer_sizes[1]), requires_grad = False)
         self.I_end = nn.Parameter(torch.eye(layer_sizes[-1]), requires_grad = False)
         self.act = activation
         self.eps = epsilon
+        self.rehu = ReHU()
         self.reset_parameters()
 
     def reset_parameters(self):
 
         for G in self.G:
             nn.init.kaiming_uniform_(G, a=5**0.5)
+        if self.make_convex:
+            for G in self.G_conv:
+                nn.init.kaiming_uniform_(G, a=5**0.5)
+        nn.init.kaiming_uniform_(self.G_2, a=5**0.5)
 
     def forward(self, x):
 
-        z = F.linear(x, self.G[0])
-        z = self.act(z)
+        if self.make_convex:
 
-        for G in self.G[1:-1]:
-            W = F.linear(G, G) + self.eps*self.I
-            z = F.linear(z, W)
+            W1 = torch.mm(torch.transpose(self.G[0],0,1),self.G[0]) + self.eps*self.I_input
+            W = torch.cat((W1, self.G_2),0)
+            z = F.linear(x, W)
+            z = self.rehu(z)
+
+            for G,G_conv in zip(self.G[1:-1], self.G_conv[:-1]):
+                W_conv = F.linear(x, G_conv)
+                W = torch.mm(torch.transpose(self.rehu(G),0,1),self.rehu(G)) + self.eps*self.I
+                # W = F.linear(self.rehu(G), self.rehu(G)) + self.eps*self.I
+                z = W_conv + F.linear(z, W)
+                z = self.rehu(z)
+
+            W_conv = F.linear(x, self.rehu(self.G_conv[-1]))
+            # W = F.linear(self.G[-1], self.G[-1]) + self.eps*self.I
+            W = torch.mm(torch.transpose(self.rehu(self.G[-1]),0,1), self.rehu(self.G[-1])) + self.eps*self.I
+            # W = F.linear(self.rehu(self.G[-1]), self.rehu(self.G[-1])) + self.eps*self.I
+            # print(F.linear(x, W))
+            return W_conv + F.linear(z, W)
+
+        else:
+
+            W1 = torch.mm(torch.transpose(self.G[0],0,1),self.G[0]) + self.eps*self.I_input
+            W = torch.cat((W1, self.G_2),0)
+            z = F.linear(x, W)
             z = self.act(z)
 
-        W = F.linear(self.G[-1], self.G[-1]) + self.eps*self.I
+            for G in self.G[1:-1]:
+                # print(G.shape)
 
-        return F.linear(z, W)
+                W = torch.mm(torch.transpose(G,0,1),G) + self.eps*self.I
+                # W = F.linear(G, G) + self.eps*self.I
+                z = F.linear(z, W)
+                z = self.act(z)
+
+            W = torch.mm(torch.transpose(self.G[-1],0,1), self.G[-1]) + self.eps*self.I
+
+            return F.linear(z, W)

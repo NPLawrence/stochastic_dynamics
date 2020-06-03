@@ -27,30 +27,32 @@ import generate_data
 # generate_data.data_linear(two_step = True, add_noise = False)
 # nonconvex = generate_data.data_nonConvex()
 # nonconvex.gen_data()
-Lorenz = generate_data.data_Lorenz()
-Lorenz.gen_data(1)
+# Lorenz = generate_data.data_Lorenz()
+# Lorenz.gen_data(1)
 
-epochs = 500
+epochs = 300
 batch_size = 512
-learning_rate = 0.005
-n = 3
+learning_rate = 0.0025
+n = 2
 add_state = False
 
-fhat = model.fhat(np.array([n, 25, 25, 25, n]), add_state = True)
+fhat = model.fhat(np.array([n, 25, 25, 25, n]), add_state = False)
 
-layer_sizes = np.array([n, 50, 50, 1])
-ICNN = L.ICNN(layer_sizes)
-V = L.MakePSD(ICNN,n)
-# layer_sizes = np.array([2, 50, 50, 50])
-# V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
+# layer_sizes = np.array([n, 25, 25, 25, 1])
+# ICNN = L.ICNN(layer_sizes)
+# V = L.MakePSD(ICNN,n,make_nonConvex = False)
+layer_sizes = np.array([2, 25, 25, 25])
+V = L.Lyapunov_NN(L.PD_weights(layer_sizes, make_convex=False))
 
 # PATH_V = './saved_models/convex_V_VanderPol_stable.pth'
 # PATH_f = './saved_models/convex_f_VanderPol_stable.pth'
 # PATH_f = './saved_models/convex_f_linear_twostep.pth'
 # PATH_f = './saved_models/convex_f_nonConvex.pth'
-PATH_f = './saved_models/convex_f_Lorenz_unstable.pth'
+# PATH_f = './saved_models/convex_f_Lorenz_unstable.pth'
 
-# PATH_f = './saved_models/rootfind_f_nonConvex.pth'
+# PATH_f = './saved_models/convex_f_nonConvex_ICNN.pth'
+
+PATH_f = './saved_models/rootfind_f_nonConvexV1.pth'
 
 # PATH_V = './saved_models/convex_V_Lorenz.pth'
 
@@ -60,16 +62,16 @@ PATH_f = './saved_models/convex_f_Lorenz_unstable.pth'
 # PATH_f = './saved_models/simple_fICNN2.pth'
 
 # f_net = model.dynamics_convex(V, n, beta = 0.99)
-f_net = model.dynamics_nonincrease(V, n)
+# f_net = model.dynamics_nonincrease(V, n)
 # f_net = fhat
 
-# f_net = rootfind_model.rootfind_module(V,n,is_training = True)
+f_net = rootfind_model.rootfind_module(V,n,is_training = True)
 
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = fhat
 
-data = pd.read_csv("./datasets/data_Lorenz.csv")
-# data = pd.read_csv("./datasets/data_nonConvex.csv")
+# data = pd.read_csv("./datasets/data_Lorenz.csv")
+data = pd.read_csv("./datasets/data_nonConvex.csv")
 
 # data = pd.read_csv("./datasets/data_Lorenz_stable_twostep.csv")
 # data = pd.read_csv("./datasets/data_linear_twostep.csv")
@@ -93,9 +95,11 @@ test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
 # writer = SummaryWriter('runs/simple_experiment_Lorenz_unstable')
 
-writer = SummaryWriter('runs/noninc_experiment_Lorenz_unstable')
+# writer = SummaryWriter('runs/noninc_experiment_Lorenz_unstable')
 
-# writer = SummaryWriter('runs/rootfind_experiment_nonConvex')
+# writer = SummaryWriter('runs/convex_experiment_nonConvex_ICNN')
+
+writer = SummaryWriter('runs/rootfind_experiment_nonConvexV1')
 
 # writer = SummaryWriter('runs/convex_experiment_linear_twostep')
 # writer = SummaryWriter('runs/convex_experiment_VanderPol_stable')
@@ -120,16 +124,19 @@ for epoch in range(epochs):
         inputs, labels = data
         optimizer.zero_grad()
         outputs = f_net(inputs)
-        loss = criterion(outputs, labels)
+        V_loss = torch.mean(V(labels))
+        loss_main = criterion(outputs, labels)
+        loss = loss_main + 0.00001*V_loss
+        # loss = loss_main
         loss.backward()
         optimizer.step()
-        running_loss += loss.item()
+        running_loss += loss_main.item()
 
     writer.add_scalar('Loss', running_loss, epoch)
-    for name, weight in f_net.named_parameters():
-        writer.add_histogram(name, weight, epoch)
-        # print(f'{name}')
-        # print(f'{name}.grad', weight.grad)
+    # for name, weight in f_net.named_parameters():
+    # #     writer.add_histogram(name, weight, epoch)
+    #     # print(f'{name}')
+    #     print(f'{name}.grad', weight.grad)
     if epoch % 10 == 0:
         print("Epoch: ", epoch, "Running loss: ", running_loss)
 # input, labels = next(iter(train_loader))

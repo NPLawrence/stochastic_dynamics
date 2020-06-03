@@ -62,15 +62,15 @@ class plot_dynamics(nn.Module):
         return X.detach().numpy()
 
 
-    def plot_trajectory(self, x0, kwargs, sample_paths = 1, show_ls = True, steps = 600, ax = plt):
+    def plot_trajectory(self, x0, kwargs, sample_paths = 1, show_ls = True, steps = 600, xy_plane = True, ax = plt):
 
         X_val = self.get_trajectory(x0, steps)
 
         if show_ls:
 
 
-            x = np.arange(-5, 5.0, 0.05)
-            y = np.arange(-5, 5.0, 0.05)
+            x = np.arange(-15, 15.0, 0.1)
+            y = np.arange(-15, 15.0, 0.1)
             # x = np.arange(-3, 8, 0.1)
             # y = np.arange(-3, 8, 0.1)
             X, Y = np.meshgrid(x, y)
@@ -93,7 +93,7 @@ class plot_dynamics(nn.Module):
             contours = ax.contour(X, Y, Z, linewidths = 1)
 
             # Display z values on contour lines
-            ax.clabel(contours, inline=1, fontsize=10, fmt = '%1.0f')
+            ax.clabel(contours, inline=1, fontsize=10, fmt = '%1.2f')
 
         if self.show_mu:
 
@@ -111,10 +111,11 @@ class plot_dynamics(nn.Module):
                 # X = X_val[:, 0, :] + X_val[:, 1, :]
                 # plt.fill(X_val[:,0,0] + X_val[:,1,0],  X_val[:,0,:] - X_val[:,1,:])
             else:
+
                 ax.plot(np.linspace(0, steps-1, steps), X_val, **kwargs)
 
         else:
-            if x0.shape[-1]>1:
+            if xy_plane:
                 for i in range(sample_paths):
                     X_val = self.get_trajectory(x0, steps)
                     if i > 0:
@@ -123,11 +124,13 @@ class plot_dynamics(nn.Module):
                     # ax.plot(X_val[-1,0], X_val[-1,1], color = "tab:blue", marker = '*', markersize = 10)
             else:
                 for i in range(sample_paths):
-                    X_val = self.get_trajectory(x0, steps)
+                    X_val = self.get_trajectory(x0, steps = steps)
+                    print(x0)
                     if i > 0:
                         kwargs["label"] = None
-                    ax.plot(np.linspace(0, steps-1, steps), X_val, **kwargs)
-
+                    print(X_val)
+                    ax.plot(X_val, **kwargs)
+                    print('hello')
 
         return X_val
         # plt.show()

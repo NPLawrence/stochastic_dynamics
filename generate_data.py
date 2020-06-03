@@ -69,29 +69,49 @@ class data_nonConvex():
         x, y = np.squeeze(state)
         return np.array([[y, -y - np.sin(x) - 2*np.clip(x+y,a_min = -1, a_max = 1)]])
 
-    def gen_data(self, trajectories=1):
+    def gen_data(self, x0 = None, steps = None):
         data = []
-        # X = np.linspace(-5,5,num=15)
-        X = np.linspace(-10,10,num=15)
-        for x1 in X:
-            for x2 in X:
-                x = np.array([[x1,x2]])
-                for i in range(30):
+        if x0 is None:
+            # X = np.linspace(-5,5,num=15)
+            X = np.linspace(-6,6,num=15)
+            for x1 in X:
+                for x2 in X:
+                    x = np.array([[x1,x2]])
+                    for i in range(40):
 
-                    k1 = self.f(x)
-                    k2 = self.f(x + self.h*(k1/2))
-                    k3 = self.f(x + self.h*(k2/2))
-                    k4 = self.f(x + self.h*k3)
-                    x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
-                    data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
-                    x = x_new
+                        k1 = self.f(x)
+                        k2 = self.f(x + self.h*(k1/2))
+                        k3 = self.f(x + self.h*(k2/2))
+                        k4 = self.f(x + self.h*k3)
+                        x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+                        data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
+                        x = x_new
 
-        np.savetxt("./datasets/data_nonConvex.csv", data, delimiter=",")
+            np.savetxt("./datasets/data_nonConvex.csv", data, delimiter=",")
+
+        else:
+            if steps is None:
+                steps = 50
+            else:
+                steps = steps
+
+            x = np.array(x0.view(1,-1).numpy())
+            data.append(np.array((x)).reshape((1,2)).squeeze())
+            for i in range(steps):
+                k1 = self.f(x)
+                k2 = self.f(x + self.h*(k1/2))
+                k3 = self.f(x + self.h*(k2/2))
+                k4 = self.f(x + self.h*k3)
+                x_new = x + (self.h/6)*(k1 + 2*k2+ 2*k3 + k4)
+                data.append(np.array((x_new)).reshape((1,2)).squeeze())
+                x = x_new
+            return np.array([data]).squeeze()
+
 
 class data_stochasticNonlinear():
     def __init__(self):
 
-        self.h = 0.1
+        self.h = 0.05
 
     def f(self, state):
         x, y = np.squeeze(state)
@@ -103,7 +123,7 @@ class data_stochasticNonlinear():
         b = np.array([[g1, g2]])
         return a, b
 
-    def gen_data(self, x0=None):
+    def gen_data(self, x0=None, steps = None):
 
         h = self.h
         data = []
@@ -111,13 +131,13 @@ class data_stochasticNonlinear():
         if x0 is None:
 
             # X = np.linspace(-5,5,num=15)
-            X = np.linspace(-5,5,num=14)
+            X = np.linspace(-5,5,num=18)
             # x = 2*np.random.randn(1,2)
 
             for x1 in X:
                 for x2 in X:
                     x = np.array([[x1,x2]])
-                    for i in range(200):
+                    for i in range(5):
 
                         Z_t, S_t = np.random.normal(0,1), np.random.choice([-1,1])
                         W_t = np.sqrt(h)*Z_t
@@ -128,17 +148,24 @@ class data_stochasticNonlinear():
                         a2, b2 = self.f(x + k1)
                         k2 = h*a2 + (W_t + np.sqrt(h)*S_t)*b2
 
-                        x_new = x + (h/2)*(k1 + k2)
-                        data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
-                        x = x_new
+                        x_new = x + (1/2)*(k1 + k2)
+                        if np.isnan(np.array((x,x_new))).any():
+                            print(x)
+                            break
+                        else:
+                            data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
+                            x = x_new
 
             np.savetxt("./datasets/data_stochasticNonlinear.csv", data, delimiter=",")
 
         else:
-
+            if steps is None:
+                steps = 100
+            else:
+                steps = steps
             x = np.array(x0.view(1,-1).numpy())
-
-            for i in range(200):
+            data.append(np.array((x)).reshape((1,2)).squeeze())
+            for i in range(steps):
 
                 Z_t, S_t = np.random.normal(0,1), np.random.choice([-1,1])
                 W_t = np.sqrt(h)*Z_t
@@ -149,7 +176,7 @@ class data_stochasticNonlinear():
                 a2, b2 = self.f(x + k1)
                 k2 = h*a2 + (W_t + np.sqrt(h)*S_t)*b2
 
-                x_new = x + (h/2)*(k1 + k2)
+                x_new = x + (1/2)*(k1 + k2)
                 data.append(np.array((x_new)).reshape((1,2)).squeeze())
                 x = x_new
 

@@ -52,13 +52,9 @@ class fhat(nn.Module):
 
 class dynamics_convex(nn.Module):
     #Modifies fhat via a simple scaling rule, exploiting convexity
-    def __init__(self, V, n, beta = 0.99, add_state = False, f = None):
+    def __init__(self, V, n, beta = 0.99, add_state = False, is_stochastic_train = True, return_gamma = False, f = None):
         super().__init__()
 
-        # fhat = nn.Sequential(nn.Linear(2, 50), nn.ReLU(),
-        #                     nn.Linear(50, 50), nn.ReLU(),
-        #                     nn.Linear(50, 50), nn.ReLU(),
-        #                     nn.Linear(50, 2))
         if f is None:
             self.fhat = fhat(np.array([n, 25, 25, 25, n]), False)
         else:
@@ -66,17 +62,70 @@ class dynamics_convex(nn.Module):
         self.V = V
         self.beta = beta
         self.add_state = add_state
+        self.is_stochastic_train = is_stochastic_train
+        self.is_init = True
+        self.return_gamma = return_gamma
+        self.n = n
 
     def forward(self, x):
         # with torch.no_grad():
 
-        if self.add_state:
-            fx = x + self.fhat(x)*((self.beta*self.V(x) - F.relu(self.beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
-            # print(self.V(fx - x))
-        else:
 
-            fx = self.fhat(x)*((self.beta*self.V(x) - F.relu(self.beta*self.V(x) - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
-        return fx
+        if self.is_stochastic_train:
+        #This is for training
+            target = self.beta*self.V(x).view(-1,1,1)
+            current = self.V(self.fhat(x)).view(-1,1,1)
+
+
+            if self.add_state:
+
+                fx = x + self.fhat(x)*((target - F.relu(target - current)) / current)
+                # print(self.V(fx - x))
+            else:
+                fx = self.fhat(x).view(-1,1,self.n)*((target - F.relu(target - current)) / current)
+            if self.return_gamma:
+                # print(target.shape)
+                return ((target - F.relu(target - current)) / current)
+            else:
+                return fx
+        else:
+        #This is for testing -- particularly stochastic models in order to track the mean/var
+            if self.is_init:
+                target = self.beta*self.V(x)
+                self.is_init = False
+
+            else:
+                target = self.beta*self.V(self.fx)
+            # target = self.beta*self.V(x)
+
+            current = self.V(self.fhat(x)).view(-1,1,1)
+            if self.add_state:
+                fx = x + self.fhat(x)*((target - F.relu(target - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
+                # print(self.V(fx - x))
+                self.fx = fx
+            else:
+                fx = self.fhat(x)*((target - F.relu(target - current)) / current)
+                self.fx = fx
+
+            if self.return_gamma:
+                # print(target.shape)
+                return ((target - F.relu(target - current)) / current)
+            else:
+                return self.fx
+
+            # self.fx = fx
+            #
+            # if self.is_init:
+            #     self.is_init = False
+            #
+            # print(self.is_init)
+            # return fx
+
+    def reset(self):
+        self.is_init = True
+
+
+
 
 # class dynamics_convex(nn.Module):
 #     #Modifies fhat via a simple scaling rule, exploiting convexity
