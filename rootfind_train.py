@@ -24,21 +24,22 @@ torch.set_grad_enabled(True)
 
 gen_data.data_linear()
 
-epochs = 300
+epochs = 500
 batch_size = 512
 learning_rate = 0.0025
+n = 2
 
 
 # fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
 
 
-fhat = nn.Sequential(nn.Linear(2, 25), nn.ReLU(),
+fhat = nn.Sequential(nn.Linear(n, 25), nn.ReLU(),
                     nn.Linear(25, 25), nn.ReLU(),
-                    nn.Linear(25, 2))
-layer_sizes = np.array([2, 50, 50, 1])
+                    nn.Linear(25, n))
+layer_sizes = np.array([n, 25, 25, 1])
 
 ICNN = L.ICNN(layer_sizes)
-V = L.MakePSD(ICNN,2)
+V = L.MakePSD(ICNN,n)
 
 # layer_sizes = np.array([2, 50, 50, 50])
 # V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
@@ -49,11 +50,11 @@ V = L.MakePSD(ICNN,2)
 
 # for name, weight in V.named_parameters():
 #     print(name, weight.grad)
-f_net = model.rootfind_module(fhat,V,is_training = True)
+f_net = model.rootfind_module(V,n,is_training = True)
 
 # PATH_ICNN = './saved_models/rootfind_ICNN.pth'
-PATH_V = './saved_models/rootfind_V1.pth'
-PATH_f = './saved_models/rootfind_f1.pth'
+PATH_V = './saved_models/rootfind_V1_test.pth'
+PATH_f = './saved_models/rootfind_f1_test.pth'
 
 # f_net = fhat
 
@@ -72,7 +73,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
-writer = SummaryWriter('runs/linear_experiment_rootfind1')
+writer = SummaryWriter('runs/linear_experiment_rootfind1_test')
 
 criterion = nn.MSELoss()
 
@@ -98,7 +99,7 @@ for epoch in range(epochs):
         loss_print = criterion(outputs, labels)
         # V_loss = torch.mean(V(labels) - V(inputs))
         V_loss = torch.mean(V(labels))
-        loss = loss_print + 0.01*V_loss
+        loss = loss_print
         # if inputs_usual.shape[0] == 0:
         #     outputs_rootfind = f_net(inputs_rootfind)
         #     # print('0', outputs_rootfind.shape, labels_rootfind.shape)
@@ -129,7 +130,7 @@ for epoch in range(epochs):
         # outputs = fhat(inputs)
         # loss = criterion(outputs, labels)
 
-        loss.backward(retain_graph = True)
+        loss.backward()
         optimizer.step()
         running_loss += loss_print.item()
 
@@ -140,7 +141,7 @@ for epoch in range(epochs):
     writer.add_scalar('Loss', running_loss, epoch)
     for name, weight in f_net.named_parameters():
         writer.add_histogram(name, weight, epoch)
-
+        # print(f'{name}.grad', weight.grad)
 
 
 

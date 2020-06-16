@@ -90,7 +90,7 @@ f_simple_eval = stochastic_model.stochastic_module(fhat = fhat_simple_eval, V = 
 f_eval.load_state_dict(torch.load(PATH_f))
 f_simple_eval.load_state_dict(torch.load(PATH_f_simple))
 
-num_trajectories = 10
+num_trajectories = 20
 
 logp_stable = np.zeros((num_trajectories,steps))
 logp_simple = np.zeros((num_trajectories,steps))
@@ -116,7 +116,6 @@ plotting_noise = vis.plot_dynamics(f_noise,V_noise,show_mu = False)
 plotting_simple_noise = vis.plot_dynamics(f_simple_noise,V,show_mu = False)
 
 
-# x0 = torch.tensor([[[4.61, -2.37]]], dtype = torch.float)
 x0 = 2*torch.tensor([[[torch.rand(1)+0.2, -torch.rand(1)-0.2]]])
 print(x0)
 
@@ -141,7 +140,6 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 
 sample_trajectory = generate_data.data_stochasticNonlinear()
 X_true = sample_trajectory.gen_data(x0,steps = steps)
-# X_true = np.loadtxt("./datasets/data_multiMod.csv", delimiter=",")
 X = plotting.get_trajectory(x0, steps = steps)
 
 fig, _ = plt.subplots(1,3, figsize=(14,4), sharey=False, constrained_layout=False)
@@ -157,11 +155,12 @@ kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 5, "alpha": 0.30,
 
 for i in range(4):
 
-        f_noise.reset()
+
         X_noise = plotting_noise.get_trajectory(x0, steps)
         if i > 0:
                 kwargs["label"] = None
         ax1.plot(np.linspace(0,steps-1, steps), X_noise, **kwargs)
+        f_noise.reset()
 
 kwargs = {"color" : "tab:red", "linewidth": 2, "label": "Predicted mean"}
 plt.plot(np.linspace(0,steps-1, steps), X, **kwargs)
@@ -193,7 +192,7 @@ kwargs = {"color" : "black", "linestyle": "--", "linewidth": 1.25, "label": "Equ
 plt.plot(np.linspace(0,steps-1, steps), np.zeros(steps), **kwargs)
 
 kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 5, "alpha": 0.30, "label": "Prediction"}
-# Xnoisy = plotting_noise.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, xy_plane = False, ax = ax1)
+Xnoisy = plotting_noise.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = steps, xy_plane = False, ax = ax1)
 for i in range(4):
 
         # f_simple_noise.reset()

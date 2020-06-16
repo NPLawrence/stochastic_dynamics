@@ -17,8 +17,7 @@ class data_linear():
         A = A.transpose()
         data = []
 
-        X = np.linspace(-5,5,num=10)
-        # X = np.array([-3, 3])
+        X = np.linspace(-5,5,num=14)
 
         for x1 in X:
             for x2 in X:
@@ -30,7 +29,7 @@ class data_linear():
                     else:
                         x_step = np.dot(x,A)
 
-                for i in range(50):
+                for i in range(30):
 
                     if two_step:
                         if add_noise:
@@ -212,8 +211,8 @@ class data_beta():
 class data_Lorenz():
     def __init__(self, two_step = False):
 
-        # self.rho = 28.0
-        self.rho = 14
+        self.rho = 28.0
+        # self.rho = 14
         self.sigma = 10.0
         self.beta = 8.0 / 3.0
         self.h = 0.01
@@ -225,9 +224,9 @@ class data_Lorenz():
         return np.array([[self.sigma*(y - x), x*(self.rho - z) - y, x*y - self.beta*z]])
 
     def gen_data(self, trajectories=1):
-        steps = 2000
+        steps = 3000
         data = []
-        x = np.array([[1,1,1]])
+        x = np.array([[1.2,1.1,0.9]])
         if self.two_step:
                 k1 = self.f(x)
                 k2 = self.f(x + self.h*(k1/2))
@@ -260,7 +259,7 @@ class data_Lorenz():
         if self.two_step:
             np.savetxt("./datasets/data_Lorenz_stable_twostep.csv", data, delimiter=",")
         else:
-            np.savetxt("./datasets/data_Lorenz_stable.csv", data, delimiter=",")
+            np.savetxt("./datasets/data_Lorenz.csv", data, delimiter=",")
 
 class data_VanderPol():
     def __init__(self, two_step = False):

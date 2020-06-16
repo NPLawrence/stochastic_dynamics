@@ -31,8 +31,7 @@ Lorenz.gen_data(1)
 
 f_simple = model.fhat(np.array([n, 25, 25, 25, n]), add_state = True)
 # fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
-layer_sizes = np.array([n, 25, 25, 1])
-layer_sizes = np.array([n, 50, 50, 1])
+layer_sizes = np.array([n, 25, 25, 25, 1])
 
 # layer_sizes = np.array([n, 50, 50, 1])
 
@@ -61,8 +60,8 @@ f = model.dynamics_nonincrease(V, n)
 # PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
 
 # PATH_f = './saved_models/convex_f_stochastic_Lorenz_k3.pth'
-PATH_f = './saved_models/noninc_f_Lorenz.pth'
-PATH_f_simple = './saved_models/simple_f_Lorenz.pth'
+PATH_f = './saved_models/noninc_f_Lorenz_unstable.pth'
+PATH_f_simple = './saved_models/simple_f_Lorenz_unstable.pth'
 
 # PATH_f = './saved_models/convex_f_Lorenz.pth'
 
@@ -91,7 +90,7 @@ f_simple.load_state_dict(torch.load(PATH_f_simple))
 
 
 
-x0 = torch.tensor([[[1+.2,1,1]]], dtype = torch.float)
+x0 = torch.tensor([[[1.2,1.1,0.9]]], dtype = torch.float)
 
 lorenz = generate_data.data_Lorenz()
 lorenz.gen_data(1)
@@ -113,9 +112,12 @@ plotting_nominal = vis.plot_dynamics_3D(f_simple,V)
     # x0 = 4*torch.randn([1,2], dtype = torch.float)
 # fig = figsize=(10,3)
 # fig, (ax1, ax2) = plt.subplots(1,2, figsize=(14,4), sharey=False, constrained_layout=False)
-fig = plt.figure(1)
-fig.gca(projection='3d')
-plt.subplots_adjust(wspace = 0.314)
+# fig = plt.figure(1)
+fig = plt.figure(figsize=plt.figaspect(0.5))
+steps = 3000
+
+# fig.gca(projection='3d')
+# plt.subplots_adjust(wspace = 0.314)
 SMALL_SIZE = 8
 MEDIUM_SIZE = 14
 BIGGER_SIZE = 16
@@ -135,14 +137,92 @@ plt.rc('mathtext', fontset = 'custom', rm = 'Times New Roman', it = 'Times New R
 
 # ax1 = fig.add_subplot(aspect=3)
 # ax1 = plt.subplot(121)
-
+# fig,_  = plt.subplots(1, 4, gridspec_kw={'width_ratios': [3, 1,1,1]}, figsize=(15,5))
+# fig.suptitle('Bounded model')
+ax1 = fig.add_subplot(121, projection='3d')
+# ax1.gca(projection='3d')
 kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
 # X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 1000)
-kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
-X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 1000)
+kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Bounded prediction"}
+X = plotting.plot_trajectory(x0, kwargs, sample_paths = 1, steps = steps)
+kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
+X_true = np.loadtxt("./datasets/data_Lorenz.csv", delimiter=",")
+ax1.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
+ax1.set_title('Bounded increments')
+
+ax2 = fig.add_subplot(122, projection='3d')
+
+kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
+X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = steps)
+# kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 5, "label": "True mean"}
+# X_true = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = ax2)
 kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
 X_true = np.loadtxt("./datasets/data_Lorenz_stable.csv", delimiter=",")
-plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
+ax2.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
+
+ax2.set_title('Simple model')
+
+plt.tight_layout()
+
+
+plt.savefig('figures/example_lorenz.eps', dpi=400, bbox_inches='tight',pad_inches=.01, metadata='eps')
+plt.savefig('figures/example_lorenz.png', dpi=400, bbox_inches='tight',pad_inches=.01)
+# plt.tight_layout()
+
+
+fig = plt.figure(figsize=plt.figaspect(0.5))
+
+kwargs_nominal = {"color" : "tab:red", "marker": ".", "markersize": 3, "label": "Nominal prediction"}
+kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
+kwargs_true = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
+
+plt.subplot(231)
+plt.plot(X_true[:, 0],**kwargs_true)
+plt.plot(X[:,0],**kwargs)
+plt.ylabel('$x$')
+plt.xlim([0, steps-1])
+
+#
+plt.subplot(232)
+plt.plot(X_true[:, 1],**kwargs_true)
+plt.plot(X[:,1],**kwargs)
+plt.title('Bounded increments')
+plt.ylabel('$y$')
+plt.xlim([0, steps-1])
+
+#
+plt.subplot(233)
+plt.plot(X_true[:, 2],**kwargs_true)
+plt.plot(X[:,2],**kwargs)
+plt.ylabel('$z$')
+plt.xlim([0, steps-1])
+
+
+plt.subplot(234)
+plt.plot(X_true[:, 0],**kwargs_true)
+plt.plot(X_nominal[:,0],**kwargs_nominal)
+plt.ylabel('$x$')
+plt.xlabel('Time step')
+plt.xlim([0, steps-1])
+
+#
+plt.subplot(235)
+plt.plot(X_true[:, 1],**kwargs_true)
+plt.plot(X_nominal[:,1],**kwargs_nominal)
+plt.title('Simple model')
+plt.ylabel('$y$')
+plt.xlabel('Time step')
+plt.xlim([0, steps-1])
+
+#
+plt.subplot(236)
+plt.plot(X_true[:, 2],**kwargs_true)
+plt.plot(X_nominal[:,2],**kwargs_nominal)
+plt.ylabel('$z$')
+plt.xlabel('Time step')
+plt.xlim([0, steps-1])
+
+plt.tight_layout()
 
 # ax1.set_ylim([-1, 6])
 # ax1.legend()
@@ -152,19 +232,11 @@ plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
 # ax1.legend(handles,labels,loc=1)
 # plt.title('Deterministic')
 #
-fig = plt.figure(2)
 # ax2 = plt.subplot(122)
 # # ax2 = fig.add_subplot(aspect=3)
 # plt.yticks([])
 # fig = plt.figure(2)
-fig.gca(projection='3d')
-kwargs = {"color" : "tab:red", "marker": ".", "markersize": 5, "label": "Nominal prediction"}
-X_nominal = plotting_nominal.plot_trajectory(x0, kwargs, sample_paths = 1, steps = 1000)
-# kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 5, "label": "True mean"}
-# X_true = plotting_true.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = False, steps = 100, ax = ax2)
-kwargs = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
-X_true = np.loadtxt("./datasets/data_Lorenz_stable.csv", delimiter=",")
-plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
+
 # ax2.set_ylim([-1, 6])
 # ax2.legend()
 # handles,labels = ax2.get_legend_handles_labels()
@@ -175,31 +247,7 @@ plt.plot(X_true[:, 0], X_true[:, 1], X_true[:, 2], **kwargs)
 # ax2.set_title("Noisy training data")
 
 
-plt.savefig('figures/example_2_convex.eps', dpi=400, bbox_inches='tight',pad_inches=.01, metadata='eps')
-plt.savefig('figures/example_2_convex.png', dpi=400, bbox_inches='tight',pad_inches=.01)
+plt.savefig('figures/example_lorenz_grid.eps', dpi=400, bbox_inches='tight',pad_inches=.01, metadata='eps')
+plt.savefig('figures/example_lorenz_grid.png', dpi=400, bbox_inches='tight',pad_inches=.01)
 # plt.tight_layout()
-plt.show()
-
-
-fig = plt.figure(3)
-
-kwargs_nominal = {"color" : "tab:red", "marker": ".", "markersize": 3, "label": "Nominal prediction"}
-kwargs = {"color" : "tab:purple", "marker": ".", "markersize": 3, "label": "Stable prediction"}
-kwargs_true = {"color" : "tab:blue", "marker": ".", "markersize": 2, "label": "True dynamics"}
-
-plt.subplot(131)
-# plt.plot(X_nominal[:,0],**kwargs_nominal)
-plt.plot(X[:,0],**kwargs)
-plt.plot(X_true[:, 0],**kwargs_true)
-
-plt.subplot(132)
-# plt.plot(X_nominal[:,1],**kwargs_nominal)
-plt.plot(X[:,1],**kwargs)
-plt.plot(X_true[:, 1],**kwargs_true)
-
-plt.subplot(133)
-# plt.plot(X_nominal[:,2],**kwargs_nominal)
-plt.plot(X[:,2],**kwargs)
-plt.plot(X_true[:, 2],**kwargs_true)
-
 plt.show()

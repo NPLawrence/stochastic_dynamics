@@ -28,22 +28,22 @@ import generate_data
 # generate_data.data_linear(add_noise = True)
 # stoch_nonLinear = generate_data.data_stochasticNonlinear()
 # stoch_nonLinear.gen_data()
+# generate_data.data_linear()
 
-epochs = 200
+epochs = 300
 batch_size = 512
 learning_rate = 0.0025
 
-
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
-k = 6
+k = 2
 n = 2
 beta = 0.99
 mode = 1
-fhat = nn.Sequential(nn.Linear(n, 25), nn.ReLU(),
+fhat = nn.Sequential(nn.Linear(n, 25), L.ReHU(),
                     # nn.Linear(50, 50), nn.ReLU(),
-                    nn.Linear(25, 25), nn.ReLU(),
+                    nn.Linear(25, 25), L.ReHU(),
                     nn.Linear(25, 2*n*k))
-layer_sizes = np.array([n, 25, 25, 1])
+layer_sizes = np.array([n, 25, 25, 25, 1])
 ICNN = L.ICNN(layer_sizes)
 V = L.MakePSD(ICNN,n)
 # f_net = model.dynamics_simple(fhat,V)
@@ -57,7 +57,11 @@ V = L.MakePSD(ICNN,n)
 # PATH_V = './saved_models/convex_V_stochastic_multiMod.pth'
 # PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
 
-PATH_f = './saved_models/convex_f_stochastic_nonLinear2.pth'
+# PATH_f = './saved_models/rootfind_f_linear_noise.pth'
+PATH_f = './saved_models/convex_f_linear_noise.pth'
+
+
+# PATH_f = './saved_models/convex_f_stochastic_nonLinear2.pth'
 # PATH_f = './saved_models/simple_f_stochastic_nonLinear2.pth'
 # PATH_f = './saved_models/rootfind_f_stochastic_nonLinear.pth'
 
@@ -71,13 +75,13 @@ PATH_f = './saved_models/convex_f_stochastic_nonLinear2.pth'
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = stochastic_model.stochastic_module(fhat, V, k)
 
-f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = 1, beta = beta)
+f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta)
 
 # f_net = fhat
 
-data = pd.read_csv("./datasets/data_stochasticNonlinear.csv")
+# data = pd.read_csv("./datasets/data_stochasticNonlinear.csv")
 # data = pd.read_csv("./datasets/data_linear.csv")
-# data = pd.read_csv("./datasets/data_linear_noise.csv")
+data = pd.read_csv("./datasets/data_linear_noise.csv")
 # data = pd.read_csv("./datasets/data_multiMod.csv")
 
 
@@ -94,7 +98,9 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_stochastic_nonLinear2')
+writer = SummaryWriter('runs/convex_f_linear_noise')
+
+# writer = SummaryWriter('runs/convex_stochastic_nonLinear2')
 # writer = SummaryWriter('runs/simple_stochastic_nonLinear2')
 # writer = SummaryWriter('runs/rootfind_stochastic_nonLinear')
 
@@ -140,7 +146,8 @@ for epoch in range(epochs):
     writer.add_scalar('Loss', running_loss, epoch)
     # for name, weight in f_net.named_parameters():
     #     # writer.add_histogram(name, weight, epoch)
-        # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+    #     # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
+    #     print(f'{name}.grad', weight.grad)
 
     if epoch % 10 == 0:
         print("Epoch: ", epoch, "Running loss: ", running_loss)

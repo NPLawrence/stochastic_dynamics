@@ -21,6 +21,9 @@ import lyapunov_NN as L
 import dynamics_plotting as vis
 import generate_data
 
+#Current saved vesion uses ReLU (not Softplus) in the implicit method
+
+
 n = 2
 fhat = model.fhat(np.array([n, 25, 25, 25, n]), False)
 
@@ -77,9 +80,9 @@ xdot, ydot = func(x, y)
 ax1.streamplot(x,y,xdot,ydot, linewidth = 0.5, color = 'tab:blue')
 
 
-plotting = vis.plot_dynamics(f,V,show_mu = False, is_stochastic = False)
-plotting_ICNN = vis.plot_dynamics(f_ICNN,V,show_mu = False, is_stochastic = False)
-plotting_rootfind = vis.plot_dynamics(f_rootfind,V_rootfind,show_mu = False, is_stochastic = False)
+plotting = vis.plot_dynamics(f,V,show_mu = False)
+plotting_ICNN = vis.plot_dynamics(f_ICNN,V,show_mu = False)
+plotting_rootfind = vis.plot_dynamics(f_rootfind,V_rootfind,show_mu = False)
 sample_trajectory = generate_data.data_nonConvex()
 
 steps = 100
@@ -154,7 +157,7 @@ ax2.legend(handles,labels)
 
 ax3 = plt.subplot(133)
 
-X = plotting_rootfind.plot_trajectory(x0, kwargs, sample_paths = 0, show_ls = True, steps = 1, ax = ax3)
+X = plotting_rootfind.plot_trajectory(x0, kwargs, sample_paths = 1, show_ls = True, steps = 1, ax = ax3)
 ax3.set_ylabel('$x_2$')
 ax3.set_xlabel('$x_1$')
 ax3.set_title('Learned Lyapunov function')

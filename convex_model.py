@@ -6,13 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-#A simple proof of concept for convex Lyapunov functions
-#   -no training, just defining and visualizing a stable deterministic system
-
-#Three steps:
-#   1. Create class for NN model for dynamics fhat
-#   2. Create class NN model for Lyapunov function
-#   3. Combine these models in a new class to create stable model
+#Stabilizing strategy for convex Lyapunov functions
 
 class fhat(nn.Module):
     #This is our 'nominal' model (before modifying/correcting the dynamics)
@@ -26,20 +20,6 @@ class fhat(nn.Module):
             layers.append(nn.ReLU())
         layers.append(nn.Linear(layer_sizes[-2], layer_sizes[-1]))
         self.fhat = nn.Sequential(*layers)
-        # self.fhat = nn.Sequential(nn.Linear(n, 25), nn.ReLU(),
-        #                     nn.Linear(25, 25), nn.ReLU(),
-        #                     nn.Linear(25, 25), nn.ReLU(),
-        #                     nn.Linear(25, n))
-
-    # def reset_parameters(self):
-    #     # copying from PyTorch Linear
-    #     for W in self.W:
-    #         nn.init.kaiming_uniform_(W, a=5**0.5)
-    #
-    #     for i,b in enumerate(self.bias):
-    #         fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.W[i])
-    #         bound = 1 / (fan_in**0.5)
-    #         nn.init.uniform_(b, -bound, bound)
 
     def forward(self, x):
 
@@ -52,7 +32,7 @@ class fhat(nn.Module):
 
 class dynamics_convex(nn.Module):
     #Modifies fhat via a simple scaling rule, exploiting convexity
-    def __init__(self, V, n, beta = 0.99, add_state = False, is_stochastic_train = True, return_gamma = False, f = None):
+    def __init__(self, V, n, beta = 0.99, is_stochastic_train = True, return_gamma = False, f = None):
         super().__init__()
 
         if f is None:
@@ -61,30 +41,20 @@ class dynamics_convex(nn.Module):
             self.fhat = f
         self.V = V
         self.beta = beta
-        self.add_state = add_state
         self.is_stochastic_train = is_stochastic_train
         self.is_init = True
         self.return_gamma = return_gamma
         self.n = n
 
     def forward(self, x):
-        # with torch.no_grad():
-
 
         if self.is_stochastic_train:
         #This is for training
-            target = self.beta*self.V(x).view(-1,1,1)
-            current = self.V(self.fhat(x)).view(-1,1,1)
+            target = self.beta*self.V(x)
+            current = self.V(self.fhat(x))
 
-
-            if self.add_state:
-
-                fx = x + self.fhat(x)*((target - F.relu(target - current)) / current)
-                # print(self.V(fx - x))
-            else:
-                fx = self.fhat(x).view(-1,1,self.n)*((target - F.relu(target - current)) / current)
+            fx = self.fhat(x)*((target - F.relu(target - current)) / current)
             if self.return_gamma:
-                # print(target.shape)
                 return ((target - F.relu(target - current)) / current)
             else:
                 return fx
@@ -96,30 +66,15 @@ class dynamics_convex(nn.Module):
 
             else:
                 target = self.beta*self.V(self.fx)
-            # target = self.beta*self.V(x)
 
-            current = self.V(self.fhat(x)).view(-1,1,1)
-            if self.add_state:
-                fx = x + self.fhat(x)*((target - F.relu(target - self.V(self.fhat(x)))) / self.V(self.fhat(x)))
-                # print(self.V(fx - x))
-                self.fx = fx
-            else:
-                fx = self.fhat(x)*((target - F.relu(target - current)) / current)
-                self.fx = fx
+            current = self.V(self.fhat(x))
 
+            fx = self.fhat(x)*((target - F.relu(target - current)) / current)
+            self.fx = fx
             if self.return_gamma:
-                # print(target.shape)
                 return ((target - F.relu(target - current)) / current)
             else:
                 return self.fx
-
-            # self.fx = fx
-            #
-            # if self.is_init:
-            #     self.is_init = False
-            #
-            # print(self.is_init)
-            # return fx
 
     def reset(self):
         self.is_init = True
@@ -250,7 +205,6 @@ class dynamics_nonincrease(nn.Module):
             gV = torch.autograd.grad(Vx, x, retain_graph = True, only_inputs=True, grad_outputs=torch.ones_like(Vx))[0]
         # fx = fhatx - F.relu((gV*(fhatx - x)).sum(dim = -1))*gV/(gV**2).sum(dim=1)[:,None]
 
-        # print(gV.requires_grad)
         fx = x + self.fhat(x) - F.relu((gV*(self.fhat(x) - x)).sum(dim = -1, keepdim = True))*gV/(torch.norm(gV, dim = -1, keepdim = True)**2)
 
         # rv = fx - gV * (F.relu((gV*fx).sum(dim=1) + self.alpha*Vx[:,0])/(gV**2).sum(dim=1))[:,None]
@@ -315,12 +269,6 @@ class dynamics_rootfind(nn.Module):
 
         return x_root
 
-    # @staticmethod
-    # def backward(ctx, grad_output):
-    #
-    #     input, = ctx.saved_tensors
-    #     grad_input = grad_output.clone()
-
 
 
 
@@ -354,8 +302,5 @@ class dynamics_stochastic(nn.Module):
             gV = torch.autograd.grad([a for a in self.V(y)], [y], create_graph=True, only_inputs=True)[0]
             alpha = alpha - (self.V(f_rand*alpha) - target)/(gV*f_rand).sum(dim = 1)
 
-            # h = torch.autograd.grad([a for a in self.V(fhatx*alpha)], [alpha], create_graph=True, only_inputs=True)[0]
-            # print((gV*fhatx).sum(dim = 1))
-            # print(h)
 
         return f_rand*alpha
