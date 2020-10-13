@@ -32,7 +32,7 @@ import generate_data
 
 epochs = 300
 batch_size = 512
-learning_rate = 0.0025
+learning_rate = 0.001
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 k = 2
@@ -58,7 +58,7 @@ V = L.MakePSD(ICNN,n)
 # PATH_f = './saved_models/convex_f_stochastic_multiMod.pth'
 
 # PATH_f = './saved_models/rootfind_f_linear_noise.pth'
-PATH_f = './saved_models/convex_f_linear_noise.pth'
+PATH_f = './saved_models/convex_f_linear_noise_TEST.pth'
 
 
 # PATH_f = './saved_models/convex_f_stochastic_nonLinear2.pth'
@@ -75,7 +75,7 @@ PATH_f = './saved_models/convex_f_linear_noise.pth'
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = stochastic_model.stochastic_module(fhat, V, k)
 
-f_net = stochastic_model.stochastic_module(fhat = fhat, V = V, n=n, k=k, mode = mode, beta = beta)
+f_net = stochastic_model.stochastic_module(V,n, f=fhat, k=k, mode=mode, beta = beta, is_training=True)
 
 # f_net = fhat
 
@@ -98,7 +98,7 @@ valid_dataset = generate_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=True)
 
-writer = SummaryWriter('runs/convex_f_linear_noise')
+writer = SummaryWriter('runs/convex_f_linear_noise_TEST')
 
 # writer = SummaryWriter('runs/convex_stochastic_nonLinear2')
 # writer = SummaryWriter('runs/simple_stochastic_nonLinear2')

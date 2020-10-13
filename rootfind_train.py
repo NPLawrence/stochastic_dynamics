@@ -24,9 +24,9 @@ torch.set_grad_enabled(True)
 
 gen_data.data_linear()
 
-epochs = 500
+epochs = 200
 batch_size = 512
-learning_rate = 0.0025
+learning_rate = 0.001
 n = 2
 
 
@@ -53,8 +53,8 @@ V = L.MakePSD(ICNN,n)
 f_net = model.rootfind_module(V,n,is_training = True)
 
 # PATH_ICNN = './saved_models/rootfind_ICNN.pth'
-PATH_V = './saved_models/rootfind_V1_test.pth'
-PATH_f = './saved_models/rootfind_f1_test.pth'
+PATH_V = './saved_models/rootfind_V1_TEST.pth'
+PATH_f = './saved_models/rootfind_f1_TEST.pth'
 
 # f_net = fhat
 
@@ -73,7 +73,7 @@ valid_dataset = gen_data.oversampdata(Valid_data)
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
 test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
-writer = SummaryWriter('runs/linear_experiment_rootfind1_test')
+writer = SummaryWriter('runs/linear_experiment_rootfind1_TEST')
 
 criterion = nn.MSELoss()
 
