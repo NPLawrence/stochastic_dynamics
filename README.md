@@ -18,3 +18,14 @@ Paper reference:
   year = {2020},
 }
 ```
+
+## Requirements
+Install the necessary packages from requirements.txt via
+```
+pip install -r requirements.txt
+```
+
+## Training
+
+## Testing and plotting
+
