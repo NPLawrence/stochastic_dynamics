@@ -23,13 +23,12 @@ class newton_iter(nn.Module):
         self.fhat = fhat
         self.V = V
 
-    def forward(self, fhatx, target, gamma):
+    def forward(self, fhatx, target, gamma, backprop = False):
 
         Vfx = self.V(fhatx*gamma) - target
         Vfx.clone().detach().requires_grad_()
         with torch.enable_grad():
-            dV_da = torch.autograd.grad(Vfx, gamma, create_graph = True, retain_graph = True, grad_outputs=torch.ones_like(Vfx))[0]
-            # TODO: In hindsight it would be more efficient to toggle create_graph depending on it it's time for backprop
+            dV_da = torch.autograd.grad(Vfx, gamma, create_graph = backprop, grad_outputs=torch.ones_like(Vfx))[0]
 
         F = gamma - (self.V(fhatx*gamma) - target)/dV_da
 
@@ -47,7 +46,6 @@ class rootfind_module(nn.Module):
     beta : number in (0,1] in the stability criterion V(x') <= beta V(x)
     f : optional user-defined nominal model.
     """
-
     def __init__(self, V, n, is_training = False, beta = 0.99, f = None):
         super().__init__()
 
@@ -111,7 +109,6 @@ class rootfind_train(torch.autograd.Function):
         In order to train V it is important that target depends on V.
     x : current state
     """
-
     @staticmethod
     def forward(ctx,V,F,fhatx,target,x):
 
@@ -129,7 +126,7 @@ class rootfind_train(torch.autograd.Function):
         end_2 = torch.ones_like(gamma_temp, requires_grad = False)
         iter = 0
 
-        while m.nonzero().shape[0] > 0 and iter < 100:
+        while m.nonzero().shape[0] > 0 and iter < 1000:
 
             a = gamma_temp[torch.where(m)].requires_grad_(True)
             fx = fhatx[torch.where(m)].requires_grad_(True)
@@ -187,9 +184,9 @@ class rootfind_train(torch.autograd.Function):
 
         with torch.enable_grad():
 
-            Fx = F(fhatx, target, gamma) # We assume we are close to the root when differentiating
-            dF_df = torch.autograd.grad(Fx, fhatx, create_graph=True, retain_graph = True, grad_outputs=torch.ones_like(Fx))[0]
-            dF_dt = torch.autograd.grad(Fx, target, create_graph=False, retain_graph = False, grad_outputs=torch.ones_like(Fx))[0]
+            Fx = F(fhatx, target, gamma, backprop = True) # TODO: We assume we are close to the root when differentiating -- ensure iterate is `stable`
+            dF_df = torch.autograd.grad(Fx, fhatx, create_graph=True, grad_outputs=torch.ones_like(Fx))[0]
+            dF_dt = torch.autograd.grad(Fx, target, create_graph=False, grad_outputs=torch.ones_like(Fx))[0]
 
         grad_rootfind_f = gamma*grad_input + torch.bmm(grad_input, torch.bmm(torch.transpose(fhatx,1,2),dF_df))
         grad_rootfind_t = torch.bmm(grad_input, torch.transpose(fhatx,1,2))*dF_dt

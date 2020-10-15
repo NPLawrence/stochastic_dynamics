@@ -15,8 +15,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 # from rootfind_autograd import rootfind_module
 
-import rootfind_model as model
-import lyapunov_NN as L
+import modules.rootfind_model as model
+import modules.lyapunov_NN as L
 
 import generate_data as gen_data
 
@@ -24,7 +24,7 @@ torch.set_grad_enabled(True)
 
 gen_data.data_linear()
 
-epochs = 200
+epochs = 300
 batch_size = 512
 learning_rate = 0.001
 n = 2
@@ -76,6 +76,8 @@ test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 writer = SummaryWriter('runs/linear_experiment_rootfind1_TEST')
 
 criterion = nn.MSELoss()
+# criterion = nn.L1Loss()
+
 
 
 #The optimization is the key step
@@ -148,7 +150,8 @@ for epoch in range(epochs):
 
         # print(f'{name}')
         # writer.add_histogram(f'{name}.grad', weight.grad, epoch)
-    print("Epoch: ", epoch, "Running loss: ", running_loss)
+    if epoch % 10 == 0:
+        print("Epoch: ", epoch, "Running loss: ", running_loss)
 # for name, weight in f_net.named_parameters():
 #     print(name, weight)
 

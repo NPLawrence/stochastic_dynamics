@@ -11,10 +11,10 @@ from torch.distributions import Normal, OneHotCategorical
 from torch.distributions.multivariate_normal import MultivariateNormal
 from torch.distributions.beta import Beta
 
-from lyapunov_NN import ReHU
+from modules.lyapunov_NN import ReHU
 
-import convex_model
-import rootfind_model
+import modules.convex_model
+import modules.rootfind_model
 
 #Stabilizing strategy for stochastic systems (convex or nonconvex Lyapunov functions)
 
@@ -78,7 +78,6 @@ class stochastic_module(nn.Module):
     show_mu : binary variable. If is_training == False then this will either output the
         conditional mean or a sample from the MDN.
     """
-
     def __init__(self, V, n, f = None, beta = 0.99, k = 1, mode = None, is_training = False, show_mu = False):
         super().__init__()
 
@@ -118,8 +117,8 @@ class stochastic_module(nn.Module):
             self.mean_dynamics = mean_dynamics(self.mu, self.pi, self.k, self.n)
             self.gamma = rootfind_model.rootfind_module(self.V, self.n, is_training=is_training, beta=beta, f = self.mean_dynamics)
 
-            self.var_dynamics = MDN_dynamics(self.fhat, self.n, self.k,False)
-
+            self.var = MDN_dynamics(self.fhat, self.n, self.k,False)
+            self.var_dynamics = variance_dynamics(self.pi, self.gamma, self.var, self.V, self.k)
 
     def forward(self, x, y = None):
 
@@ -145,11 +144,19 @@ class stochastic_module(nn.Module):
         self.gamma.reset()
 
 class MDN_dynamics(nn.Module):
-    def __init__(self,fhat,n,k, get_mu = True):
+    """
+    This module takes a MDN and outputs the mean and variance parameters
+
+    fhat : The user-provided MDN model
+    n : state dimension
+    k : number of mixtures
+    get_mu : binary variable indicating whether to output the mean parameters
+    """
+    def __init__(self, fhat, n, k, get_mu = True):
         super().__init__()
         self.fhat = fhat
-        self.k = k
         self.n = n
+        self.k = k
         self.get_mu = get_mu
 
     def forward(self, x):
@@ -158,25 +165,40 @@ class MDN_dynamics(nn.Module):
         if self.get_mu:
             output = torch.stack(mu.split(mu.shape[-1] // self.k, 1)).view(-1,self.k,self.n)
         else:
-            output = torch.clamp(torch.exp(torch.stack(var.split(var.shape[-1] // self.k, 1))).view(-1,self.k,self.n), 1e-8, max = 100)
+            #   torch.exp is also possible here, but using ELU + 1 tends to be more `stable'
+            output = torch.clamp(F.elu(torch.stack(var.split(var.shape[-1] // self.k, 1))).view(-1,self.k,self.n) + 1, 1e-8, max = 100)
         return output
 
 class pi_Network(nn.Module):
+    """
+    This is where we define the mixture coefficients network
 
+    in_dim : input dimension (e.g. n)
+    out_dim : output dimension (e.g. k)
+    hidden_dim : hidden dimension
+    """
     def __init__(self, in_dim, out_dim, hidden_dim=None):
         super().__init__()
         if hidden_dim is None:
-            hidden_dim = in_dim
-        self.network = nn.Sequential(nn.Linear(in_dim, 10), nn.Softplus(),
-                nn.Linear(10, 10), nn.Tanh(),
-                nn.Linear(10, out_dim))
+            hidden_dim = 25
+        self.network = nn.Sequential(nn.Linear(in_dim, hidden_dim), nn.Softplus(),
+                nn.Linear(hidden_dim, hidden_dim), nn.Tanh(),
+                nn.Linear(hidden_dim, out_dim))
 
     def forward(self, x):
         params = self.network(x)
         return OneHotCategorical(logits=params)
 
 class mean_dynamics(nn.Module):
+    """
+    Conditional mean dynamics derived from the means parameters and mixture coefficients
+        of a MDN
 
+    MDN_means : network for the mean parameters (e.g. MDN_dynamics)
+    pi_Network : network for the mixture coefficients (e.g. pi_Network)
+    k : number of mixtures
+    n : state dimension
+    """
     def __init__(self, MDN_means, pi_Network, k, n):
         super().__init__()
 
@@ -192,11 +214,20 @@ class mean_dynamics(nn.Module):
         return mean
 
 class variance_dynamics(nn.Module):
+    """
+    Conditional covariance dynamics derived from the variance parameters of a MDN.
+        Here the user can define the way in which the covariance goes to zero.
 
-    def __init__(self, pi, mean_dynamics, MDN_vars, V, k):
+    pi_Network : network for the mixture coefficients (e.g. pi_Network)
+    mean_dynamics : conditional mean (e.g. mean_dynamics module)
+    MDN_vars : network for the variance parameters (e.g. MDN_dynamics)
+    V : Lyapunov neural network
+    k : number of mixtures
+    """
+    def __init__(self, pi_Network, mean_dynamics, MDN_vars, V, k):
         super().__init__()
 
-        self.pi = pi
+        self.pi = pi_Network
         self.mean_dynamics = mean_dynamics
         self.MDN_vars = MDN_vars
         self.V = V
@@ -204,8 +235,10 @@ class variance_dynamics(nn.Module):
 
     def forward(self, x):
 
-        max = torch.norm(self.mean_dynamics(x),dim = -1)
+        # Define a function of mean_dynamics that goes to zero as mean_dynamics --> 0
+        #   e.g. norm, V
+        scaleVar = torch.norm(self.mean_dynamics(x),dim = -1)
 
-        output = max.unsqueeze(-1)*torch.clamp(self.MDN_vars(x), min = 1e-8, max = 100)
+        output = scaleVar.unsqueeze(-1)*torch.clamp(self.MDN_vars(x), min = 1e-8, max = 100)
 
         return output

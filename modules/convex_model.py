@@ -102,7 +102,6 @@ class dynamics_nonincrease(nn.Module):
     n : state dimension
     f : optional user-defined nominal model.
     """
-
     def __init__(self, V, n, f = None):
         super().__init__()
 

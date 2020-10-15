@@ -32,13 +32,13 @@ import generate_data
 
 epochs = 300
 batch_size = 512
-learning_rate = 0.001
+learning_rate = 0.0025
 
 # fhat = model.fhat(np.array([2, 50, 50, 2]))
 k = 2
 n = 2
 beta = 0.99
-mode = 1
+mode = 2
 fhat = nn.Sequential(nn.Linear(n, 25), L.ReHU(),
                     # nn.Linear(50, 50), nn.ReLU(),
                     nn.Linear(25, 25), L.ReHU(),
@@ -75,7 +75,7 @@ PATH_f = './saved_models/convex_f_linear_noise_TEST.pth'
 # f_net = model.dynamics_nonincrease(fhat,V)
 # f_net = stochastic_model.stochastic_module(fhat, V, k)
 
-f_net = stochastic_model.stochastic_module(V,n, f=fhat, k=k, mode=mode, beta = beta, is_training=True)
+f_net = stochastic_model.stochastic_module(V,n, k=k, mode=mode, beta = beta, is_training=True)
 
 # f_net = fhat
 
