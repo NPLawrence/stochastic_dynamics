@@ -25,7 +25,5 @@ Install the necessary packages from requirements.txt via
 pip install -r requirements.txt
 ```
 
-## Training
-
-## Testing and plotting
+## _More documentation coming_ :wrench:
 
