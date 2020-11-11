@@ -1,4 +1,4 @@
-#training for root-finding approach
+# A generic script for training locally
 
 import numpy as np
 import pandas as pd
@@ -13,60 +13,46 @@ from torch.utils.data import DataLoader
 
 from torch.utils.tensorboard import SummaryWriter
 
-# from rootfind_autograd import rootfind_module
-
-import modules.rootfind_model as model
+import modules.convex_model as convex_model
+import modules.rootfind_model as rootfind_model
+import modules.stochastic_model as stochastic_model
 import modules.lyapunov_NN as L
 
 import generate_data as gen_data
 
 torch.set_grad_enabled(True)
 
-gen_data.data_linear()
 
+# Define nominal fhat (optional -- the modules will use a default fhat),
+#   create Lyapunov NN, create stable model (convex_model, rootfind_model, stochastic_model)
+n = 2 # state dimension
+fhat =  nn.Sequential(nn.Linear(n, 25), nn.Softplus(),
+                            nn.Linear(25, 25), nn.Softplus(),
+                            nn.Linear(25, 25), nn.Softplus(),
+                            nn.Linear(25, n))
+ICNN = L.ICNN()
+V = L.MakePSD(ICNN,n)
+f_net = model.convex_model(V,n,f = fhat, is_training = True)
+
+# Specify epochs, batch_size, learning_rate, loss function, optimizer, state dimension
 epochs = 300
 batch_size = 512
 learning_rate = 0.001
-n = 2
+criterion = nn.MSELoss()
+optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
 
 
-# fhat = simple_model.fhat(np.array([2, 50, 50, 2]))
-
-
-fhat = nn.Sequential(nn.Linear(n, 25), nn.ReLU(),
-                    nn.Linear(25, 25), nn.ReLU(),
-                    nn.Linear(25, n))
-layer_sizes = np.array([n, 25, 25, 1])
-
-ICNN = L.ICNN(layer_sizes)
-V = L.MakePSD(ICNN,n)
-
-# layer_sizes = np.array([2, 50, 50, 50])
-# V = L.Lyapunov_NN(L.PD_weights(layer_sizes))
-# input = torch.randn(1,2, requires_grad=True)
-# output = V(torch.randn(1,2))
-# # print(torch.autograd.grad(V(input),input))
-# output.backward(torch.ones_like(output))
-
-# for name, weight in V.named_parameters():
-#     print(name, weight.grad)
-f_net = model.rootfind_module(V,n,is_training = True)
-
-# PATH_ICNN = './saved_models/rootfind_ICNN.pth'
-PATH_V = './saved_models/rootfind_V1_TEST.pth'
-PATH_f = './saved_models/rootfind_f1_TEST.pth'
-
-# f_net = fhat
-
+# Set paths, generate/load/split data
+PATH_f_net = './saved_models/rootfind_f1_TEST.pth'
+gen_data.data_linear()
 data = pd.read_csv("./datasets/data_linear.csv")
-
 data_input = data.values[:,:2]
 data_output = data.values[:,2:]
 Trn_input,  Val_inp, Trn_target,Val_target = train_test_split(data_input, data_output, test_size=0.2,random_state=123)
-# Train_data has our training dataset and Valid_data has our validation dataset.
+#   Train_data has our training dataset and Valid_data has our validation dataset.
 Train_data = pd.concat([pd.DataFrame(Trn_input), pd.DataFrame(Trn_target)], axis=1)
 Valid_data = pd.concat([pd.DataFrame(Val_inp), pd.DataFrame(Val_target)], axis=1)
-# training and validation dataset
+#   training and validation dataset
 train_dataset = gen_data.oversampdata(Train_data)
 valid_dataset = gen_data.oversampdata(Valid_data)
 
@@ -75,19 +61,7 @@ test_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False)
 
 writer = SummaryWriter('runs/linear_experiment_rootfind1_TEST')
 
-criterion = nn.MSELoss()
-# criterion = nn.L1Loss()
-
-
-
-#The optimization is the key step
-# rootfind = rootfind_module.rootfind_train.apply
-# optimizer = optim.SGD(f_net.parameters(), lr=learning_rate, momentum=0.9)
-# optimizer = optim.RMSprop(f_net.parameters(), lr=learning_rate)
-optimizer = optim.Adam(f_net.parameters(), lr=learning_rate)
-
-# f_net.train()
-
+f_net.train()
 for epoch in range(epochs):
 
     running_loss = 0.0

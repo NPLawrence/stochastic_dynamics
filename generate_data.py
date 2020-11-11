@@ -1,4 +1,4 @@
-#This is where we generate data for training/validation
+#This is where we generate data for experiments
 
 import numpy as np
 import pandas as pd
@@ -128,9 +128,7 @@ class data_stochasticNonlinear():
 
         if x0 is None:
 
-            # X = np.linspace(-5,5,num=15)
             X = np.linspace(-5,5,num=18)
-            # x = 2*np.random.randn(1,2)
 
             for x1 in X:
                 for x2 in X:
@@ -179,32 +177,6 @@ class data_stochasticNonlinear():
                 x = x_new
 
             return np.array([data]).squeeze()
-
-
-
-class data_beta():
-    def __init__(self):
-
-        data = []
-
-        X = np.linspace(-5,5,num=10)
-        # X = np.array([-3, 3])
-
-        for x1 in X:
-
-            x = np.array([[x1]])
-
-            for i in range(50):
-                A = Beta((torch.tensor(x)-5)**2, (torch.tensor(x)+5)**2).sample().numpy()
-                # print(A)
-
-                x_new = np.dot(x,A)
-
-                data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
-                x = x_new
-
-        np.savetxt("./datasets/data_beta.csv", data, delimiter=",")
-
 
 
 class data_Lorenz():
@@ -285,47 +257,6 @@ class data_VanderPol():
 
         np.savetxt("./datasets/data_VanderPol_stable.csv", data, delimiter=",")
 
-class data_multiMod():
-    def __init__(self, two_step = False):
-
-        self.alpha = 0.5
-        self.beta = 5.0
-        self.gamma = 1.0
-
-
-    def f(self, x, i):
-        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,1)
-        # return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(x)) + np.random.normal(0,0.1)
-
-    def f_mean(self, x, i):
-        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1))
-        # return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(x))
-
-    def gen_data(self, trajectories = 1, steps = 200, train_data = True, x = None):
-        data = []
-        if train_data:
-            for j in range(10):
-                x = np.random.normal(0,2)
-                for i in range(steps):
-                    x_new = self.f(x,i)
-                    data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
-                    x = x_new
-
-            np.savetxt("./datasets/data_multiMod.csv", data, delimiter=",")
-
-        else:
-            data.append(np.array((x)).reshape((1,1)).squeeze())
-            x_mean = x
-            data_mean = []
-            data_mean.append(np.array((x_mean)).reshape((1,1)).squeeze())
-            for i in range(steps):
-                x_new = self.f(x,i)
-                x_mean_new = self.f_mean(x_mean,i)
-                data.append(np.array((x_new)).reshape((1,1)).squeeze())
-                data_mean.append(np.array((x_mean_new)).reshape((1,1)).squeeze())
-                x = x_new
-                x_mean = x_mean_new
-            return data, data_mean
 
 
 #see https://github.com/bhuvanakundumani/pytorch_Dataloader

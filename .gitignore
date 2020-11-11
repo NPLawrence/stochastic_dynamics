@@ -10,6 +10,5 @@ log/
 *.log
 datasets/
 runs/
-figures/
 saved_models/
-examples_plot/
+misc/
