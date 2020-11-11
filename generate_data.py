@@ -2,12 +2,15 @@
 
 import numpy as np
 import pandas as pd
+from pathlib import Path
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
 from torch.distributions import Beta
 
+mainPath = Path('./datasets')
+mainPath.mkdir(exist_ok=True)
 
 class data_linear():
     def __init__(self, two_step = False, add_noise = False):
@@ -49,14 +52,14 @@ class data_linear():
 
         if two_step:
             if add_noise:
-                np.savetxt("./datasets/data_linear_twostep_noise.csv", data, delimiter=",")
+                np.savetxt(mainPath/'data_linear_twostep_noise.csv', data, delimiter=",")
             else:
-                np.savetxt("./datasets/data_linear_twostep.csv", data, delimiter=",")
+                np.savetxt(mainPath/'data_linear_twostep.csv', data, delimiter=",")
         else:
             if add_noise:
-                np.savetxt("./datasets/data_linear_noise.csv", data, delimiter=",")
+                np.savetxt(mainPath/'data_linear_noise.csv', data, delimiter=",")
             else:
-                np.savetxt("./datasets/data_linear.csv", data, delimiter=",")
+                np.savetxt(mainPath/'data_linear.csv', data, delimiter=",")
 
 class data_nonConvex():
     def __init__(self):
@@ -85,7 +88,7 @@ class data_nonConvex():
                         data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
                         x = x_new
 
-            np.savetxt("./datasets/data_nonConvex.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_nonConvex.csv', data, delimiter=",")
 
         else:
             if steps is None:
@@ -152,7 +155,7 @@ class data_stochasticNonlinear():
                             data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
                             x = x_new
 
-            np.savetxt("./datasets/data_stochasticNonlinear.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_stochasticNonlinear.csv', data, delimiter=",")
 
         else:
             if steps is None:
@@ -228,9 +231,9 @@ class data_Lorenz():
                 x = x_new
 
         if self.two_step:
-            np.savetxt("./datasets/data_Lorenz_stable_twostep.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_Lorenz_stable_twostep.csv', data, delimiter=",")
         else:
-            np.savetxt("./datasets/data_Lorenz.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_Lorenz.csv', data, delimiter=",")
 
 class data_VanderPol():
     def __init__(self, two_step = False):
@@ -255,7 +258,7 @@ class data_VanderPol():
             data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
             x = x_new
 
-        np.savetxt("./datasets/data_VanderPol_stable.csv", data, delimiter=",")
+        np.savetxt(mainPath/'data_VanderPol_stable.csv', data, delimiter=",")
 
 
 

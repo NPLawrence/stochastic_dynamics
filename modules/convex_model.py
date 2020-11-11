@@ -19,7 +19,7 @@ class fhat(nn.Module):
         layers = []
         for i in range(len(layer_sizes)-2):
             layers.append(nn.Linear(layer_sizes[i], layer_sizes[i+1]))
-            layers.append(nn.ReLU())
+            layers.append(nn.Softplus())
         layers.append(nn.Linear(layer_sizes[-2], layer_sizes[-1]))
         self.fhat = nn.Sequential(*layers)
 
@@ -31,20 +31,20 @@ class fhat(nn.Module):
             z = self.fhat(x)
         return z
 
-class dynamics_convex(nn.Module):
+class dynamics_model(nn.Module):
     """
     Stable dynamics model based on convex Lyapunov function
 
     V : Lyapunov neural network
     n : state dimension
     beta : number in (0,1] in the stability criterion V(x') <= beta V(x)
-    is_stochastic_train : binary variable indicating if a stochastic model is being trained.
+    is_training : binary variable indicating if a model is being trained.
         For training the stochastic model we may want to return just the gamma term or
         keep track of the previous 'state' i.e. means.
     return_gamma : binary variable. Indicates whether to return gamma(x)*fhat(x) or gamma(x)
     f : optional user-defined nominal model.
     """
-    def __init__(self, V, n, beta = 0.99, is_stochastic_train = False, return_gamma = False, f = None):
+    def __init__(self, V, n, beta = 0.99, is_training = False, return_gamma = False, f = None):
         super().__init__()
 
         if f is None:
@@ -53,14 +53,14 @@ class dynamics_convex(nn.Module):
             self.fhat = f
         self.V = V
         self.beta = beta
-        self.is_stochastic_train = is_stochastic_train
+        self.is_training = is_training
         self.is_init = True
         self.return_gamma = return_gamma
         self.n = n
 
     def forward(self, x):
 
-        if self.is_stochastic_train:
+        if self.is_training:
         # This is for training
             target = self.beta*self.V(x)
             current = self.V(self.fhat(x))

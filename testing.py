@@ -1,4 +1,4 @@
-#Simple script for plotting
+#Simple script for testing trained models
 
 import numpy as np
 import pandas as pd

@@ -13,8 +13,8 @@ from torch.distributions.beta import Beta
 
 from modules.lyapunov_NN import ReHU
 
-import modules.convex_model
-import modules.rootfind_model
+import modules.convex_model as convex_model
+import modules.rootfind_model as rootfind_model
 
 #Stabilizing strategy for stochastic systems (convex or nonconvex Lyapunov functions)
 
@@ -58,7 +58,7 @@ import modules.rootfind_model
 #             else:
 #                 return fx
 
-class stochastic_module(nn.Module):
+class dynamics_model(nn.Module):
     """
     This is where we bring together:
         1. Stochastic model (MDN)
@@ -106,7 +106,7 @@ class stochastic_module(nn.Module):
         elif mode == 1:
             self.mu = MDN_dynamics(self.fhat, self.n, self.k, True)
             self.mean_dynamics = mean_dynamics(self.mu, self.pi, self.k, self.n)
-            self.gamma = convex_model.dynamics_convex(V = self.V, n = n, beta  = beta, is_stochastic_train = is_training, f = self.mean_dynamics)
+            self.gamma = convex_model.dynamics_model(V = self.V, n = n, beta  = beta, is_training = is_training, f = self.mean_dynamics)
 
             self.var = MDN_dynamics(self.fhat, self.n, self.k, False)
             self.var_dynamics = variance_dynamics(self.pi, self.gamma, self.var, self.V, self.k)
@@ -115,7 +115,7 @@ class stochastic_module(nn.Module):
 
             self.mu = MDN_dynamics(self.fhat, self.n, self.k, True)
             self.mean_dynamics = mean_dynamics(self.mu, self.pi, self.k, self.n)
-            self.gamma = rootfind_model.rootfind_module(self.V, self.n, is_training=is_training, beta=beta, f = self.mean_dynamics)
+            self.gamma = rootfind_model.dynamics_model(self.V, self.n, is_training=is_training, beta=beta, f = self.mean_dynamics)
 
             self.var = MDN_dynamics(self.fhat, self.n, self.k,False)
             self.var_dynamics = variance_dynamics(self.pi, self.gamma, self.var, self.V, self.k)
