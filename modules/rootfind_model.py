@@ -114,7 +114,7 @@ class rootfind_train(torch.autograd.Function):
         ctx.V = V
         ctx.F = F
 
-        tol = 0.001
+        tol = 0.0001
 
         gamma_temp = torch.ones(size = (x.shape[0], 1, 1), requires_grad = True)
 
@@ -125,7 +125,7 @@ class rootfind_train(torch.autograd.Function):
         end_2 = torch.ones_like(gamma_temp, requires_grad = False)
         iter = 0
 
-        while m.nonzero().shape[0] > 0 and iter < 100:
+        while m.nonzero().shape[0] > 0 and iter < 1000:
 
             a = gamma_temp[torch.where(m)].requires_grad_(True)
             fx = fhatx[torch.where(m)].requires_grad_(True)
@@ -187,7 +187,7 @@ class rootfind_train(torch.autograd.Function):
             dF_df = torch.autograd.grad(Fx, fhatx, create_graph=True, grad_outputs=torch.ones_like(Fx))[0]
             dF_dt = torch.autograd.grad(Fx, target, create_graph=False, grad_outputs=torch.ones_like(Fx))[0]
 
-        grad_rootfind_f = gamma*grad_input + torch.bmm(grad_input, torch.bmm(torch.transpose(fhatx,1,2),dF_df))
+        grad_rootfind_f = Fx*grad_input + torch.bmm(grad_input, torch.bmm(torch.transpose(fhatx,1,2),dF_df))
         grad_rootfind_t = torch.bmm(grad_input, torch.transpose(fhatx,1,2))*dF_dt
 
         return None, None, grad_rootfind_f, grad_rootfind_t, None
