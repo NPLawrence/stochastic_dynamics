@@ -44,8 +44,10 @@ class MakePSD(nn.Module):
 
 
 class ICNN(nn.Module):
-    def __init__(self, layer_sizes, activation=F.relu_):
+    def __init__(self, layer_sizes, activation=ReHU()):
         super().__init__()
+
+
         self.W = nn.ParameterList([nn.Parameter(torch.Tensor(l, layer_sizes[0]))
                                    for l in layer_sizes[1:]])
         self.U = nn.ParameterList([nn.Parameter(torch.Tensor(layer_sizes[i+1], layer_sizes[i]))

@@ -1,62 +1,70 @@
-#This is where we generate data for training/validation
+#This is where we generate data for experiments
 
 import numpy as np
 import pandas as pd
+from pathlib import Path
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import DataLoader, Dataset
 from sklearn.model_selection import train_test_split
 from torch.distributions import Beta
 
+mainPath = Path('./datasets')
+mainPath.mkdir(exist_ok=True)
 
 class data_linear():
-    def __init__(self, two_step = False, add_noise = False):
+    def __init__(self, add_noise = False):
 
+        self.add_noise = add_noise
         A = np.array([[0.90, 1],[0, 0.90]])
-        A = A.transpose()
+        self.A = A.transpose()
+
+    def f(self, state):
+
+            if self.add_noise:
+                x = np.dot(state,self.A) + 0.05*state*np.random.normal(0,1)
+            else:
+                x = np.dot(state,self.A)
+
+            return x
+
+    def gen_data(self, x0=None, steps = None):
+
         data = []
+        if x0 is None:
 
-        X = np.linspace(-5,5,num=14)
+            X = np.linspace(-5,5,num=14)
 
-        for x1 in X:
-            for x2 in X:
+            for x1 in X:
+                for x2 in X:
 
-                x = np.array([[x1,x2]])
-                if two_step:
-                    if add_noise:
-                        x_step = np.dot(x,A) + 0.05*x*np.random.normal(0,1)
-                    else:
-                        x_step = np.dot(x,A)
+                    x = np.array([[x1,x2]])
 
-                for i in range(30):
+                    for i in range(30):
+                        x_new = self.f(x)
 
-                    if two_step:
-                        if add_noise:
-                            x_new = np.dot(x_step,A) + 0.05*x*np.random.normal(0,1)
-                        else:
-                            x_new = np.dot(x_step,A)
-
-                        data.append(np.array((x,x_step,x_new)).reshape((1,6)).squeeze())
-                        x = x_step
-                        x_step = x_new
-                    else:
-                        if add_noise:
-                            x_new = np.dot(x,A) + 0.05*x*np.random.normal(0,1)
-                        else:
-                            x_new = np.dot(x,A)
                         data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
                         x = x_new
 
-        if two_step:
-            if add_noise:
-                np.savetxt("./datasets/data_linear_twostep_noise.csv", data, delimiter=",")
+            if self.add_noise:
+                np.savetxt(mainPath/'data_linear_noise.csv', data, delimiter=",")
             else:
-                np.savetxt("./datasets/data_linear_twostep.csv", data, delimiter=",")
+                np.savetxt(mainPath/'data_linear.csv', data, delimiter=",")
+
         else:
-            if add_noise:
-                np.savetxt("./datasets/data_linear_noise.csv", data, delimiter=",")
+
+            if steps is None:
+                steps = 50
             else:
-                np.savetxt("./datasets/data_linear.csv", data, delimiter=",")
+                steps = steps
+            x = np.array(x0.view(1,-1).numpy())
+            data.append(np.array((x)).reshape((1,2)).squeeze())
+            for i in range(steps):
+                x_new = self.f(x)
+                data.append(np.array((x_new)).reshape((1,2)).squeeze())
+                x = x_new
+            return np.array([data]).squeeze()
+
 
 class data_nonConvex():
     def __init__(self):
@@ -85,7 +93,7 @@ class data_nonConvex():
                         data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
                         x = x_new
 
-            np.savetxt("./datasets/data_nonConvex.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_nonConvex.csv', data, delimiter=",")
 
         else:
             if steps is None:
@@ -128,9 +136,7 @@ class data_stochasticNonlinear():
 
         if x0 is None:
 
-            # X = np.linspace(-5,5,num=15)
             X = np.linspace(-5,5,num=18)
-            # x = 2*np.random.randn(1,2)
 
             for x1 in X:
                 for x2 in X:
@@ -154,7 +160,7 @@ class data_stochasticNonlinear():
                             data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
                             x = x_new
 
-            np.savetxt("./datasets/data_stochasticNonlinear.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_stochasticNonlinear.csv', data, delimiter=",")
 
         else:
             if steps is None:
@@ -179,32 +185,6 @@ class data_stochasticNonlinear():
                 x = x_new
 
             return np.array([data]).squeeze()
-
-
-
-class data_beta():
-    def __init__(self):
-
-        data = []
-
-        X = np.linspace(-5,5,num=10)
-        # X = np.array([-3, 3])
-
-        for x1 in X:
-
-            x = np.array([[x1]])
-
-            for i in range(50):
-                A = Beta((torch.tensor(x)-5)**2, (torch.tensor(x)+5)**2).sample().numpy()
-                # print(A)
-
-                x_new = np.dot(x,A)
-
-                data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
-                x = x_new
-
-        np.savetxt("./datasets/data_beta.csv", data, delimiter=",")
-
 
 
 class data_Lorenz():
@@ -256,9 +236,9 @@ class data_Lorenz():
                 x = x_new
 
         if self.two_step:
-            np.savetxt("./datasets/data_Lorenz_stable_twostep.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_Lorenz_stable_twostep.csv', data, delimiter=",")
         else:
-            np.savetxt("./datasets/data_Lorenz.csv", data, delimiter=",")
+            np.savetxt(mainPath/'data_Lorenz.csv', data, delimiter=",")
 
 class data_VanderPol():
     def __init__(self, two_step = False):
@@ -283,49 +263,8 @@ class data_VanderPol():
             data.append(np.array((x,x_new)).reshape((1,4)).squeeze())
             x = x_new
 
-        np.savetxt("./datasets/data_VanderPol_stable.csv", data, delimiter=",")
+        np.savetxt(mainPath/'data_VanderPol_stable.csv', data, delimiter=",")
 
-class data_multiMod():
-    def __init__(self, two_step = False):
-
-        self.alpha = 0.5
-        self.beta = 5.0
-        self.gamma = 1.0
-
-
-    def f(self, x, i):
-        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1)) + np.random.normal(0,1)
-        # return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(x)) + np.random.normal(0,0.1)
-
-    def f_mean(self, x, i):
-        return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(i-1))
-        # return self.alpha*x + self.beta*x/(1 + x**2) + self.gamma*np.cos(1.2*(x))
-
-    def gen_data(self, trajectories = 1, steps = 200, train_data = True, x = None):
-        data = []
-        if train_data:
-            for j in range(10):
-                x = np.random.normal(0,2)
-                for i in range(steps):
-                    x_new = self.f(x,i)
-                    data.append(np.array((x,x_new)).reshape((1,2)).squeeze())
-                    x = x_new
-
-            np.savetxt("./datasets/data_multiMod.csv", data, delimiter=",")
-
-        else:
-            data.append(np.array((x)).reshape((1,1)).squeeze())
-            x_mean = x
-            data_mean = []
-            data_mean.append(np.array((x_mean)).reshape((1,1)).squeeze())
-            for i in range(steps):
-                x_new = self.f(x,i)
-                x_mean_new = self.f_mean(x_mean,i)
-                data.append(np.array((x_new)).reshape((1,1)).squeeze())
-                data_mean.append(np.array((x_mean_new)).reshape((1,1)).squeeze())
-                x = x_new
-                x_mean = x_mean_new
-            return data, data_mean
 
 
 #see https://github.com/bhuvanakundumani/pytorch_Dataloader

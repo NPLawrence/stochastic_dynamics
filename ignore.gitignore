@@ -1,5 +1,0 @@
-#Things I have saved in a .gitignore file
-.DS_Store
-runs/
-saved_models/
-__pycache__
