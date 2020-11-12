@@ -12,12 +12,11 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class plot_dynamics(nn.Module):
-    def __init__(self, f, V, show_mu = False, reset_model = False):
+    def __init__(self, f, V, reset_model = False):
         super().__init__()
 
         self.f = f
         self.V = V
-        self.show_mu = show_mu
         self.reset_model = reset_model
 
     def get_trajectory(self, x0, steps):
@@ -40,8 +39,8 @@ class plot_dynamics(nn.Module):
 
         if show_ls:
 
-            x = np.arange(-4, 9.0, 0.1)
-            y = np.arange(-4, 9.0, 0.1)
+            x = np.arange(-20.0, 20.0, 0.25)
+            y = np.arange(-20.0, 20.0, 0.25)
 
             X, Y = np.meshgrid(x, y)
             Z = np.ndarray(X.shape)
