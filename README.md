@@ -20,10 +20,11 @@ Paper reference:
 ```
 
 ## Requirements
-Install the necessary packages from requirements.txt via
+Install the necessary packages from _requirements.txt_ via
 ```
 pip install -r requirements.txt
 ```
+## Usage
 
-## _More documentation coming_ :wrench:
+_train.py_ and _test.py_ are lightweight scripts to locally train and evaluate your model. _test.py_ visualizes the trained model and Lyapunov function. Due to the way models are saved, you need to create a folder called _saved_models_ in your working directory. To test a new system, add it to _true_dynamics.py_ and follow the conventions used there.
 
